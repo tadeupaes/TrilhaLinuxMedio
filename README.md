@@ -1,0 +1,2 @@
+# TrilhaLinuxMedio
+Treinamento para MedioTec
