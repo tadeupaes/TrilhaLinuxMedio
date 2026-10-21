@@ -1,0 +1,3123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Módulo 1: Fundamentos do Debian, Pacotes e Rede Estática</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for System & IT Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            debian: {
+              DEFAULT: '#D70A53',
+              dark: '#A80740',
+              light: '#FF4D88'
+            },
+            terminal: {
+              bg: '#0F172A',
+              bar: '#1E293B',
+              text: '#38BDF8',
+              prompt: '#4ADE80'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'Fira Code', monospace;
+    }
+    
+    /* Smooth Transitions */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col justify-between">
+
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo & Title -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-debian flex items-center justify-center text-white shadow-md shadow-pink-500/20">
+            <i class="fa-brands fa-debian text-2xl"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold tracking-wider uppercase px-2 py-0.5 bg-pink-100 text-debian rounded-md">Módulo 1</span>
+              <span class="text-xs text-slate-500 font-medium">Trilha Servidor Linux</span>
+            </div>
+            <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Fundamentos, Pacotes e Rede Estática</h1>
+          </div>
+        </div>
+
+        <!-- SCORM-like Progress Bar -->
+        <div class="hidden md:flex items-center space-x-4">
+          <div class="text-right">
+            <div class="text-xs font-semibold text-slate-600">Progresso do Módulo</div>
+            <div id="progressText" class="text-xs font-bold text-debian">0% Concluído</div>
+          </div>
+          <div class="w-36 bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
+            <div id="progressBar" class="bg-debian h-full transition-all duration-300 w-0"></div>
+          </div>
+          <button onclick="resetProgress()" title="Reiniciar Progresso" class="text-slate-400 hover:text-slate-600 p-2 text-sm rounded-lg hover:bg-slate-100 transition">
+            <i class="fa-solid fa-arrow-rotate-left"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stepper Navigation (SCORM Units) -->
+    <nav class="bg-slate-100 border-t border-slate-200 overflow-x-auto">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 flex space-x-2 sm:space-x-4 py-2 text-xs font-semibold whitespace-nowrap">
+        <button onclick="switchTab('unit1')" id="nav-unit1" class="step-btn px-3 py-1.5 rounded-lg bg-white shadow-sm text-debian border border-pink-200 flex items-center space-x-2">
+          <span class="w-5 h-5 rounded-full bg-debian text-white flex items-center justify-center text-[10px] font-bold">1</span>
+          <span>Boas-vindas & Filosofia</span>
+        </button>
+        <button onclick="switchTab('unit2')" id="nav-unit2" class="step-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 flex items-center space-x-2 transition">
+          <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px] font-bold">2</span>
+          <span>Root, Sudo & Permissões</span>
+        </button>
+        <button onclick="switchTab('unit3')" id="nav-unit3" class="step-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 flex items-center space-x-2 transition">
+          <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px] font-bold">3</span>
+          <span>Gerenciador APT</span>
+        </button>
+        <button onclick="switchTab('unit4')" id="nav-unit4" class="step-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 flex items-center space-x-2 transition">
+          <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px] font-bold">4</span>
+          <span>Configurar IP Fixo</span>
+        </button>
+        <button onclick="switchTab('unit5')" id="nav-unit5" class="step-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 flex items-center space-x-2 transition">
+          <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px] font-bold">5</span>
+          <span>Terminal Interativo</span>
+        </button>
+        <button onclick="switchTab('unit6')" id="nav-unit6" class="step-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 flex items-center space-x-2 transition">
+          <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px] font-bold">6</span>
+          <span>Dicionário & Conceitos</span>
+        </button>
+        <button onclick="switchTab('unit7')" id="nav-unit7" class="step-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 flex items-center space-x-2 transition">
+          <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px] font-bold">7</span>
+          <span>Quiz de Fixação</span>
+        </button>
+        <button onclick="switchTab('unit8')" id="nav-unit8" class="step-btn px-3 py-1.5 rounded-lg text-slate-600 hover:bg-white hover:text-slate-900 flex items-center space-x-2 transition">
+          <span class="w-5 h-5 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-[10px] font-bold">8</span>
+          <span>Aula Gravada (Vídeo)</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+    <!-- UNIT 1: Bem-Vindos & Estrutura Linux -->
+    <section id="unit1" class="tab-content active space-y-6">
+      <!-- Banner de Introdução -->
+      <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-6 sm:p-8 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="space-y-3 max-w-2xl">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 text-xs font-semibold">
+            <i class="fa-solid fa-chalkboard-user"></i>
+            <span>Para quem nunca usou Linux no Terminal</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">O que é um Servidor Linux Debian?</h2>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+            Esqueça a tela colorida do Windows com botões de clique. Em um servidor corporativo, você controla tudo através de <strong>linhas de comando escritas</strong>. O Debian é a base de estabilidade e segurança escolhida por gigantes da tecnologia no mundo inteiro.
+          </p>
+        </div>
+        <div class="w-32 h-32 flex-shrink-0 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center text-debian text-6xl shadow-inner">
+          <i class="fa-brands fa-linux"></i>
+        </div>
+      </div>
+
+      <!-- Comparativo Didático para Leigos -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold">
+            <i class="fa-brands fa-windows"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800">No Windows Desktop comum:</h3>
+          <ul class="text-sm text-slate-600 space-y-2">
+            <li class="flex items-start"><i class="fa-solid fa-xmark text-red-500 mr-2 mt-1"></i> Você clica com o mouse para abrir pastas e programas.</li>
+            <li class="flex items-start"><i class="fa-solid fa-xmark text-red-500 mr-2 mt-1"></i> Baixa instaladores <code class="bg-slate-100 px-1 rounded">.exe</code> pela internet com risco de vírus.</li>
+            <li class="flex items-start"><i class="fa-solid fa-xmark text-red-500 mr-2 mt-1"></i> A tela gráfica gasta muita memória RAM e processamento à toa.</li>
+          </ul>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border-2 border-debian/30 shadow-sm space-y-3">
+          <div class="w-10 h-10 rounded-xl bg-pink-50 text-debian flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-terminal"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800">No Debian Server corporativo:</h3>
+          <ul class="text-sm text-slate-600 space-y-2">
+            <li class="flex items-start"><i class="fa-solid fa-check text-green-500 mr-2 mt-1"></i> Você escreve comandos em inglês técnico (curtos e diretos).</li>
+            <li class="flex items-start"><i class="fa-solid fa-check text-green-500 mr-2 mt-1"></i> Instala programas de repositórios oficiais e assinados criptograficamente.</li>
+            <li class="flex items-start"><i class="fa-solid fa-check text-green-500 mr-2 mt-1"></i> Funciona com 100% de estabilidade por anos sem precisar reiniciar.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Estrutura de Pastas Essenciais (FHS) -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="text-lg font-bold text-slate-900 flex items-center">
+          <i class="fa-solid fa-folder-tree text-debian mr-2"></i>
+          As Pastas Mais Importantes que Você Vai Usar no Servidor
+        </h3>
+        <p class="text-sm text-slate-600">No Linux não existem discos <code class="bg-slate-100 px-1 py-0.5 rounded">C:\</code> ou <code class="bg-slate-100 px-1 py-0.5 rounded">D:\</code>. Tudo começa na raiz chamada <strong>barra (<code class="font-bold text-debian">/</code>)</strong>.</p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-sm font-bold font-mono text-debian flex items-center">
+              <i class="fa-solid fa-gear mr-1.5 text-xs"></i> /etc
+            </div>
+            <div class="text-xs text-slate-500 font-medium mt-1">Configurações do Sistema</div>
+            <p class="text-xs text-slate-600 mt-2">É onde moram os arquivos de texto que configuram redes, firewall, DNS, DHCP e usuários. Tudo que você muda fica aqui.</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-sm font-bold font-mono text-debian flex items-center">
+              <i class="fa-solid fa-file-waveform mr-1.5 text-xs"></i> /var/log
+            </div>
+            <div class="text-xs text-slate-500 font-medium mt-1">Diário de Bordo (Logs)</div>
+            <p class="text-xs text-slate-600 mt-2">Se um serviço parou ou foi atacado, o Linux registra tudo aqui em arquivos de log para auditoria e conserto.</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-sm font-bold font-mono text-debian flex items-center">
+              <i class="fa-solid fa-server mr-1.5 text-xs"></i> /srv e /var/www
+            </div>
+            <div class="text-xs text-slate-500 font-medium mt-1">Serviços e Sites</div>
+            <p class="text-xs text-slate-600 mt-2">Pastas onde hospedaremos os arquivos compartilhados no Samba ou as páginas web do Apache nos módulos seguintes.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arquitetura do Linux (Camadas do Sistema) -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="text-lg font-bold text-slate-900 flex items-center">
+            <i class="fa-solid fa-layer-group text-debian mr-2"></i>
+            Como o Linux Funciona por Dentro: As 4 Camadas do Sistema
+          </h3>
+          <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg">Entenda a Base</span>
+        </div>
+        
+        <p class="text-sm text-slate-600 leading-relaxed">
+          Para quem está começando agora, pense no Linux como um prédio de 4 andares. Cada camada tem uma responsabilidade essencial para fazer o servidor funcionar:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2">
+          <!-- Camada 1: Hardware -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">1</div>
+            <div class="text-sm font-bold text-slate-900 flex items-center">
+              <i class="fa-solid fa-microchip text-slate-600 mr-1.5 text-xs"></i> Hardware
+            </div>
+            <p class="text-xs text-slate-600 leading-normal">
+              A parte física: memória RAM, processador (CPU), discos SSD/HD e placas de rede.
+            </p>
+          </div>
+
+          <!-- Camada 2: Kernel -->
+          <div class="p-4 rounded-xl bg-pink-50/50 border border-pink-200 hover:border-debian/40 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-debian text-white flex items-center justify-center font-bold text-xs shadow-sm">2</div>
+            <div class="text-sm font-bold text-debian flex items-center">
+              <i class="fa-solid fa-heart-pulse mr-1.5 text-xs"></i> Kernel (O Coração)
+            </div>
+            <p class="text-xs text-slate-600 leading-normal">
+              Criado por Linus Torvalds. É o "cérebro" que conversa diretamente com os componentes físicos e gerencia recursos.
+            </p>
+          </div>
+
+          <!-- Camada 3: Shell -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">3</div>
+            <div class="text-sm font-bold text-slate-900 flex items-center">
+              <i class="fa-solid fa-terminal text-slate-600 mr-1.5 text-xs"></i> Shell / Bash
+            </div>
+            <p class="text-xs text-slate-600 leading-normal">
+              O tradutor e intérprete de comandos. Converte o que você digita em ordens diretas que o Kernel executa.
+            </p>
+          </div>
+
+          <!-- Camada 4: Aplicações -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">4</div>
+            <div class="text-sm font-bold text-slate-900 flex items-center">
+              <i class="fa-solid fa-cubes text-slate-600 mr-1.5 text-xs"></i> Aplicações e Serviços
+            </div>
+            <p class="text-xs text-slate-600 leading-normal">
+              Os programas reais do servidor que você aprenderá neste curso: SSH, DNS (BIND9), Web (Apache) e Samba.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- O que são Distribuições (Distros) e Por Que Usamos Debian -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 flex items-center">
+            <i class="fa-solid fa-network-wired text-debian mr-2"></i>
+            O que são Distribuições Linux (Distros) e a Árvore Genealógica
+          </h3>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            O "Linux" por si só é apenas o Kernel. Quando juntamos o Kernel com instaladores, utilitários, gerenciadores de pacotes e ferramentas de rede, temos uma <strong>Distribuição Linux (ou Distro)</strong>.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Família Debian -->
+          <div class="p-4 rounded-xl border-2 border-debian/30 bg-pink-50/20 space-y-2">
+            <div class="flex items-center space-x-2">
+              <div class="w-7 h-7 rounded-lg bg-debian text-white flex items-center justify-center text-sm">
+                <i class="fa-brands fa-debian"></i>
+              </div>
+              <h4 class="font-bold text-slate-900 text-sm">Família Debian (O Pai de Todos)</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              O projeto mais puro, estável e democrático. É a base onde nasceram distros mundialmente famosas como o <strong>Ubuntu</strong> e o <strong>Linux Mint</strong>. Utiliza o empacotamento <code class="font-mono bg-pink-100 text-debian px-1 rounded">.deb</code> e o gerenciador <code class="font-mono bg-slate-200 text-slate-800 px-1 rounded">apt</code>.
+            </p>
+            <div class="text-[11px] font-semibold text-debian bg-pink-100/70 p-2 rounded-lg mt-2">
+              <i class="fa-solid fa-check-circle mr-1"></i> É o nosso foco absoluto neste curso!
+            </div>
+          </div>
+
+          <!-- Família Red Hat -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+            <div class="flex items-center space-x-2">
+              <div class="w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center text-sm">
+                <i class="fa-brands fa-redhat"></i>
+              </div>
+              <h4 class="font-bold text-slate-900 text-sm">Família Red Hat / Enterprise</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Voltada a grandes corporações com suporte pago da IBM/Red Hat (RHEL), além de distribuições comunitárias como <strong>Fedora</strong>, <strong>Rocky Linux</strong> e <strong>AlmaLinux</strong>. Utiliza pacotes <code class="font-mono bg-slate-200 px-1 rounded">.rpm</code> e o instalador <code class="font-mono bg-slate-200 px-1 rounded">dnf</code>.
+            </p>
+          </div>
+
+          <!-- Família Independente (Arch / Alpine) -->
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+            <div class="flex items-center space-x-2">
+              <div class="w-7 h-7 rounded-lg bg-cyan-600 text-white flex items-center justify-center text-sm">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <h4 class="font-bold text-slate-900 text-sm">Outras Linhagens Especiais</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Distros como <strong>Alpine Linux</strong> (ultra-leve para contêineres Docker de 5MB) ou <strong>Arch Linux</strong> (focado em customização total pelo usuário avançado). Cada uma atende a uma necessidade de nicho.
+            </p>
+          </div>
+        </div>
+
+        <!-- Destaque: Por que escolhemos o Debian para servidores corporativos? -->
+        <div class="p-4 rounded-xl bg-slate-900 text-white space-y-2">
+          <div class="flex items-center space-x-2 text-pink-400 font-bold text-xs uppercase tracking-wider">
+            <i class="fa-solid fa-star"></i>
+            <span>Por que o Debian é o favorito para Servidores de Produção?</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300 pt-1">
+            <div class="flex items-start space-x-2">
+              <i class="fa-solid fa-shield-halved text-emerald-400 mt-0.5"></i>
+              <span><strong>Rocha de Estabilidade:</strong> Pacotes passam por anos de testes rigorosos antes de entrarem na versão estável.</span>
+            </div>
+            <div class="flex items-start space-x-2">
+              <i class="fa-solid fa-feather text-amber-400 mt-0.5"></i>
+              <span><strong>Consumo Quase Nulo:</strong> O Debian puro sem interface gráfica inicia usando menos de 200MB de RAM.</span>
+            </div>
+            <div class="flex items-start space-x-2">
+              <i class="fa-solid fa-code-fork text-sky-400 mt-0.5"></i>
+              <span><strong>100% Comunitário:</strong> Não pertence a nenhuma empresa privada, livre de licenças abusivas e telemetria.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Projeto GNU e Software Livre -->
+        <div class="bg-gradient-to-br from-amber-500/10 via-slate-50 to-pink-500/10 p-5 sm:p-6 rounded-2xl border-2 border-amber-300/60 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/60 pb-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-yellow-500 text-white flex items-center justify-center text-xl shadow-md shadow-amber-500/20">
+                <i class="fa-solid fa-bullhorn"></i>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold text-amber-700 uppercase tracking-wider bg-amber-100/80 px-2 py-0.5 rounded">História & Liberdade</span>
+                <h4 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">O Projeto GNU e a Filosofia do Software Livre</h4>
+              </div>
+            </div>
+            <span class="text-xs font-mono font-bold bg-white text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200 self-start sm:self-auto">
+              GNU is Not Unix
+            </span>
+          </div>
+
+          <p class="text-sm text-slate-700 leading-relaxed">
+            Muitas pessoas chamam o sistema apenas de <em>"Linux"</em>, mas o nome tecnicamente correto é <strong>GNU/Linux</strong>! Em 1983, o filósofo e programador <strong>Richard Stallman</strong> fundou o <strong>Projeto GNU</strong> com um propósito revolucionário: criar um sistema operacional 100% livre, onde qualquer ser humano tivesse o direito de usar, estudar, modificar e compartilhar programas sem depender da autorização de corporações bilionárias.
+          </p>
+
+          <!-- O Casamento GNU + Linux -->
+          <div class="bg-white p-4 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-3 items-center text-xs">
+            <div class="p-3 bg-amber-50/70 rounded-lg border border-amber-200 text-center space-y-1">
+              <div class="font-bold text-amber-900 text-sm flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-cubes text-amber-600"></i> Ferramentas GNU
+              </div>
+              <p class="text-slate-600 text-[11px]">Compiladores, comandos de terminal (<code class="font-mono bg-white px-1 rounded">ls</code>, <code class="font-mono bg-white px-1 rounded">cat</code>, <code class="font-mono bg-white px-1 rounded">cp</code>), editor e o interpretador Bash. Tudo pronto, mas <em>faltava o motor</em>.</p>
+            </div>
+
+            <div class="text-center font-bold text-slate-400 text-lg md:text-xl flex items-center justify-center">
+              <span>+</span>
+            </div>
+
+            <div class="p-3 bg-pink-50/70 rounded-lg border border-pink-200 text-center space-y-1">
+              <div class="font-bold text-debian text-sm flex items-center justify-center gap-1.5">
+                <i class="fa-brands fa-linux text-debian"></i> Kernel Linux (1991)
+              </div>
+              <p class="text-slate-600 text-[11px]">Criado pelo estudante Linus Torvalds. O "motor" que faltava para conversar diretamente com a memória, processador e placas de rede.</p>
+            </div>
+          </div>
+
+          <!-- As 4 Liberdades Essenciais do Software Livre -->
+          <div class="space-y-2 pt-1">
+            <div class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-scale-balanced text-amber-600 mr-1.5"></i>
+              As 4 Liberdades Fundamentais da Free Software Foundation (FSF)
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              <div class="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1">
+                <div class="font-bold text-amber-700 flex items-center">
+                  <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] mr-1.5 font-mono">0</span>
+                  Liberdade 0
+                </div>
+                <div class="font-semibold text-slate-800 text-[11px]">Executar o programa</div>
+                <p class="text-slate-600 text-[11px] leading-tight">Você pode rodar o software para qualquer finalidade, comercial, educacional ou governamental, sem restrições.</p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1">
+                <div class="font-bold text-amber-700 flex items-center">
+                  <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] mr-1.5 font-mono">1</span>
+                  Liberdade 1
+                </div>
+                <div class="font-semibold text-slate-800 text-[11px]">Estudar o código</div>
+                <p class="text-slate-600 text-[11px] leading-tight">Acesso total ao código-fonte para entender como tudo funciona e adaptar o software às suas necessidades.</p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1">
+                <div class="font-bold text-amber-700 flex items-center">
+                  <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] mr-1.5 font-mono">2</span>
+                  Liberdade 2
+                </div>
+                <div class="font-semibold text-slate-800 text-[11px]">Redistribuir cópias</div>
+                <p class="text-slate-600 text-[11px] leading-tight">Poder copiar o Debian e passar para seus amigos, alunos e empresas livremente, sem cometer pirataria.</p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1">
+                <div class="font-bold text-amber-700 flex items-center">
+                  <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] mr-1.5 font-mono">3</span>
+                  Liberdade 3
+                </div>
+                <div class="font-semibold text-slate-800 text-[11px]">Melhorar e publicar</div>
+                <p class="text-slate-600 text-[11px] leading-tight">Modificar o programa, corrigir problemas de segurança e liberar as melhorias para toda a comunidade se beneficiar.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 bg-amber-100/70 border border-amber-300 rounded-xl text-xs text-amber-950 flex items-start space-x-2">
+            <i class="fa-solid fa-lightbulb text-amber-600 mt-0.5 text-sm shrink-0"></i>
+            <div>
+              <strong>Por que isso importa para um Administrador de Servidores?</strong> Você tem garantia total de soberania tecnológica. Não há cobrança surpresa de licença por núcleo de CPU, telemetria espiando seus dados nem bloqueios forçados de atualização. O servidor é 100% seu.
+            </div>
+          </div>
+        </div>
+
+        <!-- Ambientes Gráficos (GUI) vs Terminal Puro (CLI) em Servidores -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+          <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center text-xl shadow-md shadow-purple-500/20">
+                <i class="fa-solid fa-display"></i>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold text-purple-700 uppercase tracking-wider bg-purple-100 px-2 py-0.5 rounded">Interface do Usuário</span>
+                <h4 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Ambientes Gráficos (GUI) vs. Servidor em Linha de Comando (CLI)</h4>
+              </div>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg">Conceito Vital para o Mercado</span>
+          </div>
+
+          <p class="text-sm text-slate-600 leading-relaxed">
+            No Linux, a interface visual com janelas, ícones e barra de tarefas é totalmente <strong>opcional e modular</strong>. Ela é chamada de <strong>Desktop Environment (Ambiente Gráfico)</strong>. Você pode instalar um Linux com interface gráfica para usar no notebook de estudo ou instalá-lo 100% puro apenas no terminal preto de texto.
+          </p>
+
+          <!-- Principais Tipos de Ambientes Gráficos -->
+          <div class="space-y-2">
+            <h5 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-shapes text-purple-600 mr-1.5"></i>
+              Os Principais Tipos de Ambientes Gráficos (para computadores comuns):
+            </h5>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-sm text-slate-900">GNOME</span>
+                  <span class="text-[10px] bg-purple-100 text-purple-800 font-semibold px-1.5 py-0.5 rounded">Moderno</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  O padrão mais popular (usado no Ubuntu e Fedora). Interface limpa inspirada em smartphones, com efeitos visuais fluidos, porém mais pesada no consumo de RAM.
+                </p>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-sm text-slate-900">KDE Plasma</span>
+                  <span class="text-[10px] bg-blue-100 text-blue-800 font-semibold px-1.5 py-0.5 rounded">Customizável</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  Semelhante ao visual do Windows com menu iniciar e barra inferior. Muito bonito, personalizável ao extremo e hoje com ótimo equilíbrio de desempenho.
+                </p>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-sm text-slate-900">XFCE</span>
+                  <span class="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-1.5 py-0.5 rounded">Leve</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  Focado em economia de hardware. Ideal para computadores antigos ou com pouca memória RAM, sacrificando efeitos 3D em prol de agilidade e estabilidade.
+                </p>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-sm text-slate-900">LXQt / MATE</span>
+                  <span class="text-[10px] bg-amber-100 text-amber-800 font-semibold px-1.5 py-0.5 rounded">Ultraleve</span>
+                </div>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  Ambientes focados em máquinas com recursos mínimos de processador e memória, com visual clássico e direto ao ponto.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Destaque: Por que Servidores Corporativos NÃO USAM Interface Gráfica? -->
+          <div class="rounded-xl border-2 border-red-200 bg-red-50/30 p-5 space-y-3">
+            <div class="flex items-center space-x-2 text-red-700 font-bold text-sm">
+              <i class="fa-solid fa-ban text-lg text-red-600"></i>
+              <span>Regra de Ouro: Por que Servidores Reais NUNCA têm Ambiente Gráfico?</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-700 leading-relaxed">
+              Em grandes empresas e provedores de nuvem (AWS, Google Cloud, Azure), 99% dos servidores Debian operam em modo <strong>Headless (Sem Monitor / Apenas Terminal CLI)</strong>. Os motivos são essenciais:
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+              <div class="p-3 bg-white rounded-lg border border-red-100 space-y-1 text-xs">
+                <div class="font-bold text-red-700 flex items-center">
+                  <i class="fa-solid fa-bolt mr-1.5 text-amber-500"></i> 1. Desempenho e RAM
+                </div>
+                <p class="text-slate-600 text-[11px]">Uma interface gráfica consome de 1GB a 2GB de RAM só para desenhar janelas. Sem ela, o Debian gasta menos de 150MB, sobrando 100% dos recursos para o Apache, DNS e banco de dados.</p>
+              </div>
+
+              <div class="p-3 bg-white rounded-lg border border-red-100 space-y-1 text-xs">
+                <div class="font-bold text-red-700 flex items-center">
+                  <i class="fa-solid fa-shield-virus mr-1.5 text-red-500"></i> 2. Segurança Reforçada
+                </div>
+                <p class="text-slate-600 text-[11px]">Quanto mais programas instalados (drivers de vídeo, navegadores, gerenciador de janelas), maior a superfície de ataque para invasores explorarem brechas de segurança.</p>
+              </div>
+
+              <div class="p-3 bg-white rounded-lg border border-red-100 space-y-1 text-xs">
+                <div class="font-bold text-red-700 flex items-center">
+                  <i class="fa-solid fa-arrows-spin mr-1.5 text-blue-500"></i> 3. Estabilidade Extrema
+                </div>
+                <p class="text-slate-600 text-[11px]">Drivers de placa de vídeo e servidores gráficos (Xorg/Wayland) podem travar ou exigir reinicializações. O servidor em modo texto roda ininterruptamente por anos sem reiniciar.</p>
+              </div>
+
+              <div class="p-3 bg-white rounded-lg border border-red-100 space-y-1 text-xs">
+                <div class="font-bold text-red-700 flex items-center">
+                  <i class="fa-solid fa-code mr-1.5 text-emerald-600"></i> 4. Automação e SSH
+                </div>
+                <p class="text-slate-600 text-[11px]">Você não clica em servidores à distância. Você programa scripts em Bash e gerencia 500 máquinas simultaneamente via SSH com poucos comandos digitados.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SUBMÓDULO 1.1: INSTALAÇÃO DO DEBIAN PASSO A PASSO -->
+        <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6 sm:p-7 rounded-2xl border-2 border-debian/40 shadow-xl space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-xl bg-debian flex items-center justify-center text-white text-2xl shadow-md shadow-pink-500/30">
+                <i class="fa-solid fa-compact-disc"></i>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold text-pink-300 uppercase tracking-wider bg-debian/30 px-2 py-0.5 rounded">Módulo 1.1 • Prática de Laboratório</span>
+                <h4 class="text-lg sm:text-xl font-bold text-white leading-tight">Instalação Passo a Passo do Debian Server</h4>
+              </div>
+            </div>
+            <a href="https://www.debian.org/doc/manuals/debian-handbook/installation.pt-br.html" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition self-start sm:self-auto">
+              <i class="fa-solid fa-book-open text-debian"></i>
+              <span>Manual Oficial Debian</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-0.5"></i>
+            </a>
+          </div>
+
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Baseado nas diretrizes do <strong>Debian Administrator's Handbook</strong>, este é o roteiro exato que você seguirá na tela do instalador (seja em máquina virtual como VirtualBox/VMware ou computador físico). Siga cada etapa com calma:
+          </p>
+
+          <!-- Timeline dos Passos da Instalação -->
+          <div class="space-y-3.5 text-xs">
+            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 font-bold text-pink-400 text-sm">
+                  <span class="w-6 h-6 rounded-full bg-debian text-white flex items-center justify-center text-xs">1</span>
+                  <span>Inicialização (Boot) e Idioma</span>
+                </div>
+                <span class="text-[11px] text-slate-400 font-mono">debian-installer</span>
+              </div>
+              <ul class="text-slate-300 space-y-1.5 pl-8 list-disc">
+                <li>No menu inicial do CD/Pendrive (Netinst), selecione <strong class="text-white">"Install"</strong> (ou <em>"Graphical Install"</em>). Em servidores, o instalador em modo texto clássico é o mais comum.</li>
+                <li><strong>Idioma (Language):</strong> Escolha <em>"Portuguese (Brazil)"</em> ou <em>"English"</em>.</li>
+                <li><strong>País e Teclado:</strong> Selecione <em>"Brasil"</em> e mapa de teclado <em>"Português Brasileiro (ABNT2)"</em>.</li>
+              </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 font-bold text-pink-400 text-sm">
+                  <span class="w-6 h-6 rounded-full bg-debian text-white flex items-center justify-center text-xs">2</span>
+                  <span>Identidade da Máquina e Domínio</span>
+                </div>
+                <span class="text-[11px] text-slate-400 font-mono">Hostname & Domain</span>
+              </div>
+              <ul class="text-slate-300 space-y-1.5 pl-8 list-disc">
+                <li><strong>Nome da máquina (Hostname):</strong> Defina <strong class="text-white font-mono bg-slate-900 px-1.5 py-0.5 rounded">servidor</strong> ou <strong class="text-white font-mono bg-slate-900 px-1.5 py-0.5 rounded">debian-srv</strong>.</li>
+                <li><strong>Nome de domínio:</strong> Coloque <strong class="text-white font-mono bg-slate-900 px-1.5 py-0.5 rounded">lab.local</strong>.</li>
+              </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 font-bold text-amber-400 text-sm">
+                  <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-bold">3</span>
+                  <span>Contas de Acesso: Root e Usuário Comum</span>
+                </div>
+                <span class="text-[11px] text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">Decisão Importante</span>
+              </div>
+              <div class="text-slate-300 space-y-2 pl-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                  <div class="p-2.5 bg-slate-900/90 rounded-lg border border-slate-700">
+                    <strong class="text-pink-400 block mb-1"><i class="fa-solid fa-key mr-1"></i> 1. Senha do superusuário (root):</strong>
+                    Defina uma senha segura para o administrador absoluto do sistema.
+                  </div>
+                  <div class="p-2.5 bg-slate-900/90 rounded-lg border border-slate-700">
+                    <strong class="text-emerald-400 block mb-1"><i class="fa-solid fa-user mr-1"></i> 2. Conta do usuário comum:</strong>
+                    Crie sua conta pessoal (ex: <code class="text-white font-mono">aluno</code>) e defina sua senha rotineira.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 font-bold text-pink-400 text-sm">
+                  <span class="w-6 h-6 rounded-full bg-debian text-white flex items-center justify-center text-xs">4</span>
+                  <span>Particionamento de Disco</span>
+                </div>
+                <span class="text-[11px] text-slate-400 font-mono">Partman</span>
+              </div>
+              <ul class="text-slate-300 space-y-1.5 pl-8 list-disc">
+                <li>Escolha: <strong class="text-white">"Assistido - usar o disco inteiro"</strong>.</li>
+                <li>Esquema: escolha <strong class="text-white">"Todos os arquivos em uma única partição"</strong>.</li>
+                <li>Finalize e confirme marcando <strong class="text-emerald-400 font-bold">"SIM"</strong> para gravar no disco.</li>
+              </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 font-bold text-pink-400 text-sm">
+                  <span class="w-6 h-6 rounded-full bg-debian text-white flex items-center justify-center text-xs">5</span>
+                  <span>Configuração do Gerenciador de Pacotes (APT)</span>
+                </div>
+                <span class="text-[11px] text-slate-400 font-mono">Mirrors</span>
+              </div>
+              <ul class="text-slate-300 space-y-1.5 pl-8 list-disc">
+                <li>País do espelho: <strong class="text-white">Brasil</strong>. Espelho: <strong class="text-white">deb.debian.org</strong>.</li>
+                <li>Proxy HTTP: Deixe em branco. Concurso de popularidade: "Não".</li>
+              </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-pink-950/40 border-2 border-pink-500/60 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 font-bold text-pink-300 text-sm">
+                  <span class="w-6 h-6 rounded-full bg-debian text-white flex items-center justify-center text-xs">6</span>
+                  <span>Seleção de Software (Tasksel) - Ponto Decisivo do Servidor!</span>
+                </div>
+                <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-debian text-white">Regra de Ouro</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-8 pt-1">
+                <div class="p-2.5 bg-red-950/40 border border-red-500/40 rounded-lg text-slate-300 space-y-1">
+                  <div class="text-red-400 font-bold flex items-center">
+                    <i class="fa-solid fa-square-xmark mr-1.5 text-base"></i> DESMARQUE com a barra de espaço:
+                  </div>
+                  <div class="line-through text-slate-400 font-mono text-[11px]">[ ] Debian desktop environment</div>
+                  <div class="line-through text-slate-400 font-mono text-[11px]">[ ] GNOME (ou XFCE/KDE)</div>
+                </div>
+                <div class="p-2.5 bg-emerald-950/40 border border-emerald-500/40 rounded-lg text-slate-300 space-y-1">
+                  <div class="text-emerald-400 font-bold flex items-center">
+                    <i class="fa-solid fa-square-check mr-1.5 text-base"></i> DEIXE MARCADO com asterisco:
+                  </div>
+                  <div class="text-emerald-300 font-bold font-mono text-[11px]">[ * ] SSH server</div>
+                  <div class="text-emerald-300 font-bold font-mono text-[11px]">[ * ] standard system utilities</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2 font-bold text-pink-400 text-sm">
+                  <span class="w-6 h-6 rounded-full bg-debian text-white flex items-center justify-center text-xs">7</span>
+                  <span>Carregador de Inicialização (GRUB) e Conclusão</span>
+                </div>
+                <span class="text-[11px] text-slate-400 font-mono">Bootloader</span>
+              </div>
+              <ul class="text-slate-300 space-y-1.5 pl-8 list-disc">
+                <li>Instalar o GRUB no registro mestre (MBR)? Marque <strong class="text-emerald-400 font-bold">"SIM"</strong>.</li>
+                <li>Dispositivo: selecione seu disco (ex: <code class="text-white font-mono bg-slate-900 px-1 rounded">/dev/sda</code>).</li>
+                <li>Remova a mídia e conclua para reiniciar!</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão de Próxima Etapa -->
+      <div class="flex justify-end pt-4">
+        <button onclick="switchTab('unit2')" class="px-6 py-3 rounded-xl bg-debian text-white font-bold hover:bg-debian-dark transition shadow-md shadow-pink-500/20 flex items-center space-x-2">
+          <span>Avançar: Entender Root, Sudo & Permissões</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- UNIT 2: Root vs Sudo & Permissões -->
+    <section id="unit2" class="tab-content space-y-6">
+      <div class="border-l-4 border-debian pl-4">
+        <span class="text-xs font-bold text-debian uppercase tracking-wider">Unidade 2</span>
+        <h2 class="text-2xl font-bold text-slate-900">Entendendo Permissões: Superusuário (root) vs Usuário Comum</h2>
+      </div>
+
+      <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-amber-900 text-sm flex items-start space-x-3">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg mt-0.5"></i>
+        <div>
+          <strong class="font-bold">Aviso Fundamental para Servidores:</strong> No Linux, o usuário <strong>root</strong> tem poder absoluto. Ele pode apagar todo o sistema com um só comando sem pedir confirmação. Por isso, nunca trabalhamos como root o tempo todo!
+        </div>
+      </div>
+
+      <!-- Passo a Passo Interativo -->
+      <div class="space-y-4">
+        <h3 class="text-lg font-bold text-slate-800">Passo a Passo: Como habilitar o sudo no Debian Puro</h3>
+        
+        <!-- Step 1 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">1º Passo</span>
+            <span class="text-xs text-slate-400">Entrando como superusuário</span>
+          </div>
+          <p class="text-sm text-slate-600">No terminal do Debian recém-instalado, o seu usuário comum não tem permissão para alterar nada. Precisamos alternar para o root com o comando:</p>
+          
+          <div class="bg-terminal-bg text-white p-4 rounded-xl font-mono-code text-sm flex items-center justify-between relative group">
+            <div>
+              <span class="text-terminal-prompt font-bold">aluno@debian:~$</span> <span class="text-white">su -</span>
+            </div>
+            <button onclick="copyToClipboard('su -')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1 rounded transition">Copiar</button>
+          </div>
+          <p class="text-xs text-slate-500">
+            <i class="fa-solid fa-circle-info text-blue-500 mr-1"></i> Digite a senha que você definiu para o <strong>root</strong> durante a instalação do sistema (ela não aparecerá na tela enquanto você digita por segurança!).
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">2º Passo</span>
+            <span class="text-xs text-slate-400">Instalando a ferramenta sudo</span>
+          </div>
+          <p class="text-sm text-slate-600">Agora que o prompt virou <code class="text-red-500 font-bold">root@debian:~#</code>, baixe o pacote do sudo:</p>
+          
+          <div class="bg-terminal-bg text-white p-4 rounded-xl font-mono-code text-sm flex items-center justify-between relative group">
+            <div>
+              <span class="text-red-400 font-bold">root@debian:~#</span> <span class="text-white">apt update && apt install -y sudo</span>
+            </div>
+            <button onclick="copyToClipboard('apt update && apt install -y sudo')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1 rounded transition">Copiar</button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">3º Passo</span>
+            <span class="text-xs text-slate-400">Dando poderes de administrador ao seu usuário</span>
+          </div>
+          <p class="text-sm text-slate-600">Adicione o seu usuário de estudos (substitua <code>aluno</code> pelo seu nome de usuário) no grupo oficial de administradores:</p>
+          
+          <div class="bg-terminal-bg text-white p-4 rounded-xl font-mono-code text-sm flex items-center justify-between relative group">
+            <div>
+              <span class="text-red-400 font-bold">root@debian:~#</span> <span class="text-white">usermod -aG sudo aluno</span>
+            </div>
+            <button onclick="copyToClipboard('usermod -aG sudo aluno')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1 rounded transition">Copiar</button>
+          </div>
+
+          <p class="text-sm text-slate-600 pt-2">Agora saia do root:</p>
+          <div class="bg-terminal-bg text-white p-3 rounded-xl font-mono-code text-sm flex items-center justify-between">
+            <div><span class="text-red-400 font-bold">root@debian:~#</span> <span class="text-white">exit</span></div>
+            <button onclick="copyToClipboard('exit')" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1 rounded transition">Copiar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPANSÃO UNIDADE 2: GESTÃO DE UTILIZADORES, GRUPOS E PERMISSÕES -->
+      <div class="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200 shadow-sm space-y-7 mt-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-11 h-11 rounded-xl bg-debian text-white flex items-center justify-center text-xl shadow-md shadow-pink-500/20">
+              <i class="fa-solid fa-users-gear"></i>
+            </div>
+            <div>
+              <span class="text-[11px] font-bold text-debian uppercase tracking-wider bg-pink-50 px-2 py-0.5 rounded">Aprofundamento Prático</span>
+              <h3 class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Administração de Acessos, Grupos e Permissões de Ficheiros</h3>
+            </div>
+          </div>
+          <span class="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-700 rounded-lg self-start sm:self-auto flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-halved text-debian"></i>
+            Princípio do Menor Privilégio
+          </span>
+        </div>
+
+        <p class="text-sm text-slate-600 leading-relaxed">
+          No Linux corporativo, a regra de ouro da segurança é: <strong>cada pessoa e cada serviço só deve ter acesso estritamente ao que precisa para trabalhar</strong>.
+        </p>
+
+        <!-- Etapa 1: Identidade -->
+        <div class="space-y-3">
+          <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+            <span class="w-6 h-6 rounded-lg bg-slate-800 text-white flex items-center justify-center text-xs">1</span>
+            <span>Identificando a Sessão e Testando Privilégios (`whoami`, `id`, `sudo -l`)</span>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-slate-800 flex items-center justify-between">
+                <span>whoami</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">Identidade</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Exibe o nome do utilizador atualmente logado no terminal.</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>aluno@debian:~$ whoami</span>
+                <button onclick="copyToClipboard('whoami')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+            </div>
+
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-slate-800 flex items-center justify-between">
+                <span>id [utilizador]</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">UID / GID</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Mostra o UID (ID do usuário), GID principal e todos os grupos.</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>aluno@debian:~$ id</span>
+                <button onclick="copyToClipboard('id')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+            </div>
+
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-slate-800 flex items-center justify-between">
+                <span>sudo -l</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">Privilégios</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Lista quais comandos a conta tem permissão de executar.</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>aluno@debian:~$ sudo -l</span>
+                <button onclick="copyToClipboard('sudo -l')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Etapa 2: Utilizadores e Grupos -->
+        <div class="space-y-4 pt-2">
+          <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+            <span class="w-6 h-6 rounded-lg bg-slate-800 text-white flex items-center justify-center text-xs">2</span>
+            <span>Criação e Gestão de Utilizadores e Grupos (`adduser`, `groupadd`, `usermod`)</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+              <div class="flex items-center space-x-2 text-debian font-bold text-sm">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Gestão de Utilizadores</span>
+              </div>
+              <div class="space-y-2 text-xs text-slate-600">
+                <div class="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1">
+                  <div class="font-mono text-slate-900 font-bold flex justify-between items-center">
+                    <span>sudo adduser joao</span>
+                    <button onclick="copyToClipboard('sudo adduser joao')" class="text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded text-slate-700">Copiar</button>
+                  </div>
+                  <p class="text-[11px]">Cria o utilizador com diretório <code class="font-mono bg-slate-100 px-1 rounded">/home/joao</code>.</p>
+                </div>
+
+                <div class="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1">
+                  <div class="font-mono text-slate-900 font-bold flex justify-between items-center">
+                    <span>sudo passwd joao</span>
+                    <button onclick="copyToClipboard('sudo passwd joao')" class="text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded text-slate-700">Copiar</button>
+                  </div>
+                  <p class="text-[11px]">Permite redefinir ou alterar a palavra-passe do utilizador.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+              <div class="flex items-center space-x-2 text-indigo-600 font-bold text-sm">
+                <i class="fa-solid fa-people-group"></i>
+                <span>Gestão de Grupos Departamentais</span>
+              </div>
+              <div class="space-y-2 text-xs text-slate-600">
+                <div class="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1">
+                  <div class="font-mono text-slate-900 font-bold flex justify-between items-center">
+                    <span>sudo groupadd ti</span>
+                    <button onclick="copyToClipboard('sudo groupadd ti')" class="text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded text-slate-700">Copiar</button>
+                  </div>
+                  <p class="text-[11px]">Cria um grupo no sistema (ex: <code class="font-mono bg-slate-100 px-1 rounded">ti</code>).</p>
+                </div>
+
+                <div class="bg-white p-2.5 rounded-lg border border-slate-200 space-y-1">
+                  <div class="font-mono text-slate-900 font-bold flex justify-between items-center">
+                    <span>sudo usermod -aG ti joao</span>
+                    <button onclick="copyToClipboard('sudo usermod -aG ti joao')" class="text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded text-slate-700">Copiar</button>
+                  </div>
+                  <p class="text-[11px]">Adiciona o utilizador <code class="font-mono">joao</code> ao grupo <code class="font-mono">ti</code>.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Etapa 3: Permissões Numéricas -->
+        <div class="space-y-4 pt-2">
+          <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+            <span class="w-6 h-6 rounded-lg bg-slate-800 text-white flex items-center justify-center text-xs">3</span>
+            <span>A Matemática das Permissões no Linux: Notação Octal</span>
+          </div>
+
+          <div class="p-4 bg-slate-900 text-white rounded-xl border border-slate-700 font-mono-code text-xs space-y-3">
+            <div class="text-slate-400 text-[11px]">Estrutura de `ls -l arquivo.sh`:</div>
+            <div class="flex flex-wrap items-center gap-2 text-sm sm:text-base">
+              <span class="p-1.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-bold">-</span>
+              <span class="p-1.5 rounded bg-pink-950/80 border border-pink-500 text-pink-300 font-bold">rwx (7)</span>
+              <span class="p-1.5 rounded bg-indigo-950/80 border border-indigo-500 text-indigo-300 font-bold">r-x (5)</span>
+              <span class="p-1.5 rounded bg-slate-800 border border-slate-700 text-slate-400 font-bold">--- (0)</span>
+              <span class="text-xs text-slate-400 ml-2 font-sans font-medium">= Notação Numérica: <strong class="text-emerald-400 font-mono text-sm">750</strong></span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 text-xs font-sans">
+              <div class="p-2.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <div class="flex items-center justify-between font-bold text-pink-300 font-mono">
+                  <span>r (Leitura)</span>
+                  <span class="text-base text-white">4</span>
+                </div>
+                <p class="text-slate-400 text-[11px] mt-1">Ler arquivos ou listar pastas.</p>
+              </div>
+
+              <div class="p-2.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <div class="flex items-center justify-between font-bold text-indigo-300 font-mono">
+                  <span>w (Escrita)</span>
+                  <span class="text-base text-white">2</span>
+                </div>
+                <p class="text-slate-400 text-[11px] mt-1">Modificar ou apagar arquivos/pastas.</p>
+              </div>
+
+              <div class="p-2.5 bg-slate-800/80 rounded-lg border border-slate-700">
+                <div class="flex items-center justify-between font-bold text-emerald-300 font-mono">
+                  <span>x (Execução)</span>
+                  <span class="text-base text-white">1</span>
+                </div>
+                <p class="text-slate-400 text-[11px] mt-1">Rodar scripts ou entrar em diretórios (`cd`).</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Laboratório TI vs Financeiro -->
+        <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6 sm:p-7 rounded-2xl border-2 border-debian/50 shadow-xl space-y-4">
+          <div class="flex items-center space-x-3 border-b border-slate-700 pb-3">
+            <div class="w-10 h-10 rounded-xl bg-debian flex items-center justify-center text-white text-xl shadow-md">
+              <i class="fa-solid fa-flask-vial"></i>
+            </div>
+            <div>
+              <span class="text-[11px] font-bold text-pink-300 uppercase tracking-wider bg-debian/30 px-2 py-0.5 rounded">Laboratório Prático</span>
+              <h4 class="text-base sm:text-lg font-bold text-white">Desafio: Segregação Departamental (TI vs Financeiro)</h4>
+            </div>
+          </div>
+
+          <div class="bg-slate-950 p-3.5 rounded-lg font-mono-code text-xs space-y-1.5 border border-slate-800">
+            <div><span class="text-slate-400"># 1. Criação das contas e grupos:</span></div>
+            <div>sudo adduser joao && sudo adduser pedro</div>
+            <div>sudo groupadd ti && sudo usermod -aG ti joao</div>
+            <div><span class="text-slate-400"># 2. Pasta com restrição absoluta (770):</span></div>
+            <div>sudo mkdir -p /empresa/ti && sudo chown root:ti /empresa/ti</div>
+            <div>sudo chmod 770 /empresa/ti</div>
+            <div>echo "Senhas dos Servidores" | sudo tee /empresa/ti/segredos.txt</div>
+            <div><span class="text-slate-400"># 3. Teste como Pedro (deve dar Permissão Negada):</span></div>
+            <div>sudo -u pedro cat /empresa/ti/segredos.txt</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegação -->
+      <div class="flex justify-between pt-4">
+        <button onclick="switchTab('unit1')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i> Voltar à Unidade 1
+        </button>
+        <button onclick="switchTab('unit3')" class="px-6 py-2.5 rounded-xl bg-debian text-white font-bold hover:bg-debian-dark transition shadow-md shadow-pink-500/20 flex items-center space-x-2">
+          <span>Avançar: Gerenciador APT</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- UNIT 3: Gerenciador APT Completo -->
+    <section id="unit3" class="tab-content space-y-6">
+      <div class="border-l-4 border-debian pl-4">
+        <span class="text-xs font-bold text-debian uppercase tracking-wider">Unidade 3</span>
+        <h2 class="text-2xl font-bold text-slate-900">Gerenciamento Completo de Pacotes com o APT</h2>
+      </div>
+
+      <p class="text-sm text-slate-600 leading-relaxed">
+        O <strong>APT (Advanced Package Tool)</strong> é o instalador oficial do Debian. Ele baixa programas diretamente de servidores oficiais na internet, resolvendo e instalando dependências automaticamente.
+      </p>
+
+      <!-- Comparativo Didático: update vs upgrade -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center space-x-2 text-blue-600 font-bold">
+            <i class="fa-solid fa-rotate text-lg"></i>
+            <span>sudo apt update</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            <strong>O que faz:</strong> Baixa a lista atualizada de programas disponíveis na nuvem do Debian. Ele <em>não</em> instala nem altera nenhum programa no computador; apenas atualiza o "catálogo da loja".
+          </p>
+          <div class="bg-terminal-bg text-white p-3 rounded-xl font-mono-code text-xs flex justify-between items-center">
+            <span>aluno@debian:~$ sudo apt update</span>
+            <button onclick="copyToClipboard('sudo apt update')" class="bg-slate-700 px-2 py-0.5 rounded text-[11px]">Copiar</button>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center space-x-2 text-emerald-600 font-bold">
+            <i class="fa-solid fa-arrow-up-from-bracket text-lg"></i>
+            <span>sudo apt upgrade -y</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            <strong>O que faz:</strong> Compara os programas que você tem instalados com o catálogo novo e atualiza todos para as versões mais seguras e recentes. O parâmetro <code>-y</code> aceita a instalação automaticamente.
+          </p>
+          <div class="bg-terminal-bg text-white p-3 rounded-xl font-mono-code text-xs flex justify-between items-center">
+            <span>aluno@debian:~$ sudo apt upgrade -y</span>
+            <button onclick="copyToClipboard('sudo apt upgrade -y')" class="bg-slate-700 px-2 py-0.5 rounded text-[11px]">Copiar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kit Básico de Ferramentas -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center">
+          <i class="fa-solid fa-toolbox text-debian mr-2"></i>
+          Instalando o "Kit Básico do Administrador Linux"
+        </h3>
+        <p class="text-xs text-slate-600">
+          Vamos instalar as ferramentas fundamentais que usaremos durante todo o curso:
+        </p>
+        <div class="bg-terminal-bg text-white p-4 rounded-xl font-mono-code text-xs sm:text-sm flex items-center justify-between">
+          <span class="text-white">sudo apt install -y curl wget nano net-tools iproute2 dnsutils</span>
+          <button onclick="copyToClipboard('sudo apt install -y curl wget nano net-tools iproute2 dnsutils')" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs">Copiar</button>
+        </div>
+      </div>
+
+      <!-- Pesquisa, Auditoria, Remoção e sources.list -->
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <h3 class="text-base font-bold text-slate-900 flex items-center">
+          <i class="fa-solid fa-magnifying-glass-chart text-debian mr-2"></i>
+          Ciclo de Vida do Pacote: Pesquisa, Remoção e Repositórios
+        </h3>
+
+        <!-- Pesquisa e Auditoria -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <span class="font-bold text-slate-800 block">1. Pesquisar e Inspecionar Pacotes</span>
+            <p class="text-slate-600">Procure utilitários sem saber o nome exato:</p>
+            <div class="bg-terminal-bg text-white p-2 rounded font-mono-code flex justify-between items-center">
+              <span>apt search nginx</span>
+              <button onclick="copyToClipboard('apt search nginx')" class="bg-slate-700 px-2 py-0.5 rounded text-[10px]">Copiar</button>
+            </div>
+            <div class="bg-terminal-bg text-white p-2 rounded font-mono-code flex justify-between items-center">
+              <span>apt show nginx</span>
+              <button onclick="copyToClipboard('apt show nginx')" class="bg-slate-700 px-2 py-0.5 rounded text-[10px]">Copiar</button>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+            <span class="font-bold text-slate-800 block">2. Listar o que está Instalado</span>
+            <p class="text-slate-600">Audite pacotes presentes no disco:</p>
+            <div class="bg-terminal-bg text-white p-2 rounded font-mono-code flex justify-between items-center">
+              <span>apt list --installed</span>
+              <button onclick="copyToClipboard('apt list --installed')" class="bg-slate-700 px-2 py-0.5 rounded text-[10px]">Copiar</button>
+            </div>
+            <div class="bg-terminal-bg text-white p-2 rounded font-mono-code flex justify-between items-center">
+              <span>dpkg -l | grep apache2</span>
+              <button onclick="copyToClipboard('dpkg -l | grep apache2')" class="bg-slate-700 px-2 py-0.5 rounded text-[10px]">Copiar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Remoção e Limpeza -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
+          <span class="font-bold text-slate-800 block">3. Remoção e Limpeza Segura do Sistema</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
+              <strong class="text-amber-700">apt remove (Remove apenas o binário)</strong>
+              <p class="text-slate-600">Apaga os executáveis, mas preserva arquivos em <code>/etc</code> para reinstalação posterior.</p>
+              <code class="block font-mono bg-slate-100 p-1 rounded text-[11px]">sudo apt remove nginx</code>
+            </div>
+            <div class="p-3 bg-white rounded-lg border border-slate-200 space-y-1">
+              <strong class="text-red-700">apt purge (Exclusão Completa)</strong>
+              <p class="text-slate-600">Exclui o programa e deleta todos os arquivos de configuração residuais.</p>
+              <code class="block font-mono bg-slate-100 p-1 rounded text-[11px]">sudo apt purge nginx</code>
+            </div>
+          </div>
+          <div class="p-2.5 bg-slate-100 rounded-lg flex items-center justify-between font-mono-code text-[11px]">
+            <span>sudo apt autoremove --purge && sudo apt clean</span>
+            <button onclick="copyToClipboard('sudo apt autoremove --purge && sudo apt clean')" class="bg-slate-300 px-2 py-0.5 rounded text-slate-800 font-sans text-xs">Copiar</button>
+          </div>
+        </div>
+
+        <!-- Anatomia do sources.list -->
+        <div class="p-4 rounded-xl bg-slate-900 text-white space-y-3 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-pink-400">4. Entendendo o `/etc/apt/sources.list`</span>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">Repositórios</span>
+          </div>
+          <p class="text-slate-300">
+            Cada linha neste arquivo define de onde o Debian baixa seus pacotes:
+          </p>
+          <div class="bg-slate-950 p-3 rounded-lg font-mono-code text-[11px] text-emerald-400 overflow-x-auto">
+            deb http://deb.debian.org/debian bookworm main contrib non-free-firmware
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px] text-slate-300">
+            <div class="p-2 bg-slate-800 rounded"><strong>deb:</strong> Pacotes binários compilados.</div>
+            <div class="p-2 bg-slate-800 rounded"><strong>URL:</strong> Servidor espelho oficial.</div>
+            <div class="p-2 bg-slate-800 rounded"><strong>bookworm:</strong> Versão Debian (12).</div>
+            <div class="p-2 bg-slate-800 rounded"><strong>main:</strong> Software 100% livre.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AMPLIAÇÃO PEDAGÓGICA DA UNIDADE 3: SEGURANÇA, REPOSITÓRIOS E DIAGNÓSTICO -->
+      <div class="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200 shadow-sm space-y-7 mt-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-11 h-11 rounded-xl bg-debian text-white flex items-center justify-center text-xl shadow-md shadow-pink-500/20">
+              <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <div>
+              <span class="text-[11px] font-bold text-debian uppercase tracking-wider bg-pink-50 px-2 py-0.5 rounded">Aprofundamento Prático</span>
+              <h3 class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Diagnóstico, Repositórios Avançados e Resolução de Falhas no APT</h3>
+            </div>
+          </div>
+          <span class="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-700 rounded-lg self-start sm:self-auto flex items-center gap-1.5">
+            <i class="fa-solid fa-clock text-debian"></i>
+            Carga Horária Prática: 6 Horas
+          </span>
+        </div>
+
+        <p class="text-sm text-slate-600 leading-relaxed">
+          No dia a dia de servidores em produção, administrar pacotes vai muito além de <code class="font-mono bg-slate-100 px-1 py-0.5 rounded text-debian font-semibold">apt install</code>. Um bom administrador precisa saber como investigar dependências antes de instalar, reparar instalações travadas, configurar atualizações de segurança automáticas e auditar o histórico de alterações.
+        </p>
+
+        <!-- Arquitetura APT vs DPKG -->
+        <div class="p-4 rounded-xl bg-slate-900 text-white space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-bold text-pink-400 flex items-center">
+              <i class="fa-solid fa-diagram-project mr-2"></i>
+              Como o APT e o DPKG se Relacionam
+            </h4>
+            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">Arquitetura</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
+            <div class="p-3 bg-slate-800/90 rounded-lg border border-slate-700 space-y-1">
+              <div class="text-amber-400 font-bold flex items-center">
+                <i class="fa-solid fa-cloud-arrow-down mr-1.5"></i> 1. Repositórios & Índices
+              </div>
+              <p class="text-slate-300 text-[11px] leading-relaxed">
+                Servidores na internet contendo milhares de pacotes <code class="font-mono text-pink-300">.deb</code> assinados criptograficamente. O comando <code class="font-mono bg-slate-950 px-1 rounded">apt update</code> baixa apenas os índices locais (catálogo) para o computador.
+              </p>
+            </div>
+
+            <div class="p-3 bg-slate-800/90 rounded-lg border border-slate-700 space-y-1">
+              <div class="text-pink-400 font-bold flex items-center">
+                <i class="fa-solid fa-gears mr-1.5"></i> 2. APT (Nível Alto)
+              </div>
+              <p class="text-slate-300 text-[11px] leading-relaxed">
+                O cérebro inteligente: calcula conflitos, resolve árvores inteiras de dependências, faz o download automático dos arquivos e chama o instalador de baixo nível.
+              </p>
+            </div>
+
+            <div class="p-3 bg-slate-800/90 rounded-lg border border-slate-700 space-y-1">
+              <div class="text-emerald-400 font-bold flex items-center">
+                <i class="fa-solid fa-box-open mr-1.5"></i> 3. DPKG (Nível Baixo)
+              </div>
+              <p class="text-slate-300 text-[11px] leading-relaxed">
+                O manipulador direto de disco: descompacta os arquivos binários nos diretórios do sistema (<code class="font-mono text-emerald-300">/usr/bin</code>, <code class="font-mono text-emerald-300">/etc</code>) e executa os scripts de pós-instalação. Não resolve dependências sozinho.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela Comparativa de Atualizações -->
+        <div class="space-y-3">
+          <h4 class="text-sm font-bold text-slate-900 flex items-center">
+            <i class="fa-solid fa-table-list text-debian mr-2"></i>
+            Tabela de Consulta Rápida: Diferença Entre as Operações de Atualização
+          </h4>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
+                <tr>
+                  <th class="px-4 py-2.5">Comando</th>
+                  <th class="px-4 py-2.5">O que faz na prática?</th>
+                  <th class="px-4 py-2.5">Altera programas no disco?</th>
+                  <th class="px-4 py-2.5">Quando usar?</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200 text-slate-700">
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-3 font-mono font-bold text-blue-600">sudo apt update</td>
+                  <td class="px-4 py-3">Atualiza os índices de versões disponíveis nos repositórios.</td>
+                  <td class="px-4 py-3"><span class="px-2 py-0.5 rounded bg-slate-100 font-semibold text-slate-600">Não (Zero mudanças)</span></td>
+                  <td class="px-4 py-3">Antes de qualquer instalação ou atualização.</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-3 font-mono font-bold text-emerald-600">sudo apt upgrade</td>
+                  <td class="px-4 py-3">Atualiza os pacotes instalados <strong>sem remover</strong> nenhum pacote existente.</td>
+                  <td class="px-4 py-3"><span class="px-2 py-0.5 rounded bg-emerald-100 font-semibold text-emerald-800">Sim (Apenas upgrades)</span></td>
+                  <td class="px-4 py-3">Manutenção de rotina semanal ou mensal do servidor.</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-3 font-mono font-bold text-purple-600">sudo apt full-upgrade</td>
+                  <td class="px-4 py-3">Atualiza pacotes podendo <strong>remover ou substituir</strong> pacotes para acomodar mudanças drásticas de dependências.</td>
+                  <td class="px-4 py-3"><span class="px-2 py-0.5 rounded bg-purple-100 font-semibold text-purple-800">Sim (Pode remover obsoletos)</span></td>
+                  <td class="px-4 py-3">Atualizações de versão maior do Debian (ex: Debian 11 para 12).</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-3 font-mono font-bold text-amber-600">sudo apt autoremove</td>
+                  <td class="px-4 py-3">Remove bibliotecas e dependências que foram puxadas automaticamente no passado e agora não servem para mais nada.</td>
+                  <td class="px-4 py-3"><span class="px-2 py-0.5 rounded bg-amber-100 font-semibold text-amber-800">Sim (Remove órfãos)</span></td>
+                  <td class="px-4 py-3">Após remover programas grandes para liberar espaço em disco.</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="px-4 py-3 font-mono font-bold text-rose-600">sudo apt clean</td>
+                  <td class="px-4 py-3">Esvazia completamente o cache de arquivos instaladores <code class="font-mono bg-slate-100 px-1 rounded">.deb</code> em <code class="font-mono text-slate-800">/var/cache/apt/archives/</code>.</td>
+                  <td class="px-4 py-3"><span class="px-2 py-0.5 rounded bg-rose-100 font-semibold text-rose-800">Sim (Limpa instaladores baixados)</span></td>
+                  <td class="px-4 py-3">Quando a partição raiz <code class="font-mono">/</code> estiver quase cheia.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Investigar antes de Instalar -->
+        <div class="space-y-3 pt-2">
+          <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+            <span class="w-6 h-6 rounded-lg bg-slate-800 text-white flex items-center justify-center text-xs">5</span>
+            <span>Investigando Pacotes Antes da Instalação (`apt show`, `apt policy`, `apt depends`)</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Em servidores de missão crítica, nunca instale um pacote às cegas. Descubra sua versão exata, de qual repositório ele virá e quais programas serão instalados em conjunto como dependência:
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-slate-800 flex items-center justify-between">
+                <span>apt show [pacote]</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">Ficha Técnica</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Exibe mantenedor, tamanho de download, espaço em disco necessário e descrição completa da aplicação.</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>apt show nginx</span>
+                <button onclick="copyToClipboard('apt show nginx')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+            </div>
+
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-slate-800 flex items-center justify-between">
+                <span>apt policy [pacote]</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">Origem e Prioridade</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Mostra qual versão está instalada e de qual repositório/espelho virá a atualização caso você instale.</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>apt policy nginx</span>
+                <button onclick="copyToClipboard('apt policy nginx')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+            </div>
+
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="font-bold text-slate-800 flex items-center justify-between">
+                <span>apt depends [pacote]</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">Árvore de Dependências</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Mapeia todas as bibliotecas e utilitários que o pacote exige para conseguir funcionar.</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>apt depends nginx</span>
+                <button onclick="copyToClipboard('apt depends nginx')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instalação Local e Alerta de Segurança -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 text-xs">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+            <span class="font-bold text-slate-800 block text-sm flex items-center">
+              <i class="fa-solid fa-file-arrow-down text-debian mr-2"></i>
+              Instalação Segura de Pacotes `.deb` Locais
+            </span>
+            <p class="text-slate-600 leading-relaxed">
+              No passado usava-se o comando <code class="font-mono bg-slate-200 px-1 rounded">dpkg -i arquivo.deb</code>, que falhava caso faltassem dependências. No Debian moderno, utilizamos o próprio <strong>APT</strong> passando o caminho do arquivo local (usando <code class="font-mono text-debian font-bold">./</code>):
+            </p>
+            <div class="bg-terminal-bg text-white p-2.5 rounded font-mono-code flex justify-between items-center">
+              <span>sudo apt install ./programa.deb</span>
+              <button onclick="copyToClipboard('sudo apt install ./programa.deb')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+            </div>
+            <p class="text-[11px] text-slate-500">
+              <i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i> <strong>Vantagem:</strong> O APT instala o pacote local e baixa automaticamente as dependências oficiais da internet necessárias!
+            </p>
+          </div>
+
+          <!-- Alerta de Segurança -->
+          <div class="p-4 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-950 space-y-2">
+            <div class="font-bold text-sm text-amber-900 flex items-center">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600 mr-2 text-base"></i>
+              Alerta de Segurança: Fontes Não Verificadas
+            </div>
+            <p class="text-xs leading-relaxed">
+              Nunca baixe arquivos <code class="font-mono bg-amber-100 px-1 rounded text-amber-900">.deb</code> aleatórios de sites desconhecidos. A instalação de um arquivo <code class="font-mono">.deb</code> local não torna seu fornecedor confiável. Pacotes de terceiros podem conter scripts maliciosos de pós-instalação que rodam diretamente com privilégios de <strong>root</strong>!
+            </p>
+          </div>
+        </div>
+
+        <!-- Recuperação de Falhas e Instalações Travadas -->
+        <div class="p-4 rounded-xl bg-red-50/50 border-2 border-red-200 space-y-3 text-xs">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="font-bold text-sm text-red-900 flex items-center">
+              <i class="fa-solid fa-screwdriver-wrench text-red-600 mr-2"></i>
+              Recuperação de Emergência: Reparação de Instalações Interrompidas
+            </span>
+            <span class="text-[10px] font-bold bg-red-100 text-red-800 px-2 py-0.5 rounded">Kit Primeiros Socorros</span>
+          </div>
+
+          <p class="text-slate-700 leading-relaxed">
+            Se a energia acabar durante uma atualização, ou se o terminal for fechado no meio de uma instalação, o banco de dados do DPKG pode ficar em estado inconsistente ou bloqueado por travas (<code class="font-mono bg-white px-1 rounded">/var/lib/dpkg/lock</code>). Estes dois comandos restauram o sistema com segurança:
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3 bg-white rounded-lg border border-red-200 space-y-1.5">
+              <div class="flex justify-between items-center font-bold text-slate-800 font-mono">
+                <span>sudo dpkg --configure -a</span>
+                <button onclick="copyToClipboard('sudo dpkg --configure -a')" class="text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded text-slate-700 font-sans">Copiar</button>
+              </div>
+              <p class="text-slate-600 text-[11px]">
+                <strong>O que faz:</strong> Retoma e finaliza a configuração de todos os pacotes que foram descompactados, mas cujos scripts pós-instalação foram interrompidos antes de terminar.
+              </p>
+            </div>
+
+            <div class="p-3 bg-white rounded-lg border border-red-200 space-y-1.5">
+              <div class="flex justify-between items-center font-bold text-slate-800 font-mono">
+                <span>sudo apt --fix-broken install</span>
+                <button onclick="copyToClipboard('sudo apt --fix-broken install')" class="text-[10px] bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded text-slate-700 font-sans">Copiar</button>
+              </div>
+              <p class="text-slate-600 text-[11px]">
+                <strong>O que faz:</strong> Corrige árvores de dependências quebradas, baixando automaticamente arquivos faltantes ou desfazendo instalações parciais que estejam corrompidas.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comparativo de Repositórios: Tradicional vs DEB822 -->
+        <div class="space-y-3 pt-2 text-xs">
+          <h4 class="text-sm font-bold text-slate-900 flex items-center">
+            <i class="fa-solid fa-code-compare text-debian mr-2"></i>
+            Repositórios do Debian: Formato Tradicional vs. Formato Moderno DEB822
+          </h4>
+          <p class="text-slate-600 leading-relaxed">
+            Nas versões mais recentes do Debian e Ubuntu, você poderá encontrar repositórios declarados de duas maneiras diferentes. Sempre verifique qual formato está presente na sua instalação:
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-900">1. Formato Tradicional de Linha Única</span>
+                <span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded font-mono">/etc/apt/sources.list</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Uma linha contínua descrevendo tipo, endereço, codinome e componentes:</p>
+              <div class="bg-slate-900 text-emerald-400 p-2.5 rounded font-mono-code text-[11px] overflow-x-auto">
+                deb http://deb.debian.org/debian bookworm main contrib non-free-firmware
+              </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-900">2. Formato Moderno DEB822 (Multi-campo)</span>
+                <span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded font-mono">/etc/apt/sources.list.d/debian.sources</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Estruturado em blocos de chave e valor, com suporte nativo e explícito a assinaturas criptográficas:</p>
+              <div class="bg-slate-900 text-emerald-400 p-2.5 rounded font-mono-code text-[11px] overflow-x-auto leading-relaxed">
+                Types: deb<br>
+                URIs: http://deb.debian.org/debian<br>
+                Suites: bookworm bookworm-updates<br>
+                Components: main contrib non-free-firmware<br>
+                Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Atualizações Automáticas de Segurança -->
+        <div class="p-4 rounded-xl bg-emerald-50/60 border border-emerald-300 space-y-3 text-xs">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="font-bold text-sm text-emerald-900 flex items-center">
+              <i class="fa-solid fa-shield-halved text-emerald-600 mr-2"></i>
+              Automação e Hardening: Atualizações Automáticas de Segurança (`unattended-upgrades`)
+            </div>
+            <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">Boas Práticas</span>
+          </div>
+
+          <p class="text-slate-700 leading-relaxed">
+            Em servidores de produção conectados à internet, vulnerabilidades críticas (*Zero-Days*) precisam ser corrigidas imediatamente, mesmo que o administrador esteja dormindo ou ausente. O pacote <code class="font-mono bg-white px-1 rounded text-emerald-900">unattended-upgrades</code> baixa e aplica exclusivamente correções de segurança em segundo plano:
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-white p-3 rounded-lg border border-emerald-200 space-y-1">
+              <span class="font-bold text-slate-800 text-[11px]">1. Instalação do utilitário:</span>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>sudo apt install -y unattended-upgrades</span>
+                <button onclick="copyToClipboard('sudo apt install -y unattended-upgrades')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+            </div>
+
+            <div class="bg-white p-3 rounded-lg border border-emerald-200 space-y-1">
+              <span class="font-bold text-slate-800 text-[11px]">2. Ativação interativa guiada:</span>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>sudo dpkg-reconfigure unattended-upgrades</span>
+                <button onclick="copyToClipboard('sudo dpkg-reconfigure unattended-upgrades')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-600">
+            <i class="fa-solid fa-circle-info text-blue-500 mr-1"></i> Os registros e relatórios de tudo o que foi atualizado automaticamente ficam salvos em <code class="font-mono bg-white px-1 rounded">/var/log/unattended-upgrades/</code>.
+          </p>
+        </div>
+
+        <!-- Laboratório Final da Unidade 3: Administrador de Pacotes -->
+        <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6 sm:p-7 rounded-2xl border-2 border-debian/50 shadow-xl space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-debian flex items-center justify-center text-white text-xl shadow-md">
+                <i class="fa-solid fa-laptop-code"></i>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold text-pink-300 uppercase tracking-wider bg-debian/30 px-2 py-0.5 rounded">Desafio Prático Final</span>
+                <h4 class="text-base sm:text-lg font-bold text-white">Laboratório: O Desafio do Administrador de Pacotes</h4>
+              </div>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">10 Etapas Sequenciais</span>
+          </div>
+
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Execute os 10 passos abaixo no seu servidor Debian para vivenciar o ciclo de vida completo de uma aplicação corporativa (auditoria prévia, instalação, verificação de origem, remoção branda, limpeza total e consulta de logs):
+          </p>
+
+          <div class="space-y-2 text-xs">
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">1. Atualizar o índice dos repositórios:</span>
+                <button onclick="copyToClipboard('sudo apt update')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">sudo apt update</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">2. Verificar se existem atualizações pendentes:</span>
+                <button onclick="copyToClipboard('apt list --upgradable')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">apt list --upgradable</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">3. Pesquisar o nginx e auditar suas dependências:</span>
+                <button onclick="copyToClipboard('apt show nginx && apt depends nginx')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">apt show nginx && apt depends nginx</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">4. Instalar o nginx e confirmar a versão instalada:</span>
+                <button onclick="copyToClipboard('sudo apt install -y nginx && nginx -v')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">sudo apt install -y nginx && nginx -v</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">5. Inspecionar a origem do pacote instalado:</span>
+                <button onclick="copyToClipboard('apt policy nginx')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">apt policy nginx</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-amber-400 font-bold">6. Remover o programa preservando arquivos de configuração (`remove`):</span>
+                <button onclick="copyToClipboard('sudo apt remove -y nginx')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">sudo apt remove -y nginx</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-amber-400 font-bold">7. Conferir os arquivos residuais preservados em `/etc`:</span>
+                <button onclick="copyToClipboard('ls -la /etc/nginx')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">ls -la /etc/nginx</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-rose-400 font-bold">8. Executar o `purge` para deletar configurações residuais por completo:</span>
+                <button onclick="copyToClipboard('sudo apt purge -y nginx nginx-common')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">sudo apt purge -y nginx nginx-common</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-emerald-400 font-bold">9. Remover pacotes dependentes órfãos e limpar cache baixado:</span>
+                <button onclick="copyToClipboard('sudo apt autoremove -y && sudo apt clean')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">sudo apt autoremove -y && sudo apt clean</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-sky-400 font-bold">10. Consultar o histórico oficial de auditoria do APT:</span>
+                <button onclick="copyToClipboard('tail -n 25 /var/log/apt/history.log')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">tail -n 25 /var/log/apt/history.log</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegação -->
+      <div class="flex justify-between pt-4">
+        <button onclick="switchTab('unit2')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i> Voltar à Unidade 2
+        </button>
+        <button onclick="switchTab('unit4')" class="px-6 py-2.5 rounded-xl bg-debian text-white font-bold hover:bg-debian-dark transition shadow-md shadow-pink-500/20 flex items-center space-x-2">
+          <span>Avançar: Configurar IP Fixo</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- UNIT 4: Rede Estática -->
+    <section id="unit4" class="tab-content space-y-6">
+      <div class="border-l-4 border-debian pl-4">
+        <span class="text-xs font-bold text-debian uppercase tracking-wider">Unidade 4</span>
+        <h2 class="text-2xl font-bold text-slate-900">Configuração de Rede com Endereço IP Fixo</h2>
+      </div>
+
+      <div class="p-4 rounded-xl bg-pink-50 border border-pink-200 text-debian text-sm">
+        <strong>Regra de Ouro:</strong> Servidores nunca usam IP automático (DHCP). Se o IP do servidor mudar, os clientes perderão o acesso ao site, pastas do Samba e DNS.
+      </div>
+
+      <!-- Passo 1: Identificar a interface -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">1º Passo</span>
+          <span class="text-xs text-slate-400">Descobrindo o nome da sua placa de rede</span>
+        </div>
+        <p class="text-sm text-slate-600">No terminal, execute o comando resumido de rede:</p>
+        <div class="bg-terminal-bg text-white p-3 rounded-xl font-mono-code text-xs sm:text-sm flex justify-between items-center">
+          <span>ip -br link</span>
+          <button onclick="copyToClipboard('ip -br link')" class="bg-slate-700 px-3 py-1 rounded text-xs">Copiar</button>
+        </div>
+        <p class="text-xs text-slate-500">
+          Você verá o nome da placa (ex: <code class="font-bold text-debian">eth0</code> ou <code class="font-bold text-debian">enp0s3</code>). Anote esse nome!
+        </p>
+      </div>
+
+      <!-- Passo 2: Editar interfaces -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">2º Passo</span>
+          <span class="text-xs text-slate-400">Editando o arquivo `/etc/network/interfaces`</span>
+        </div>
+        <p class="text-sm text-slate-600">Abra o arquivo de configuração de rede no editor Nano:</p>
+        <div class="bg-terminal-bg text-white p-3 rounded-xl font-mono-code text-xs sm:text-sm flex justify-between items-center">
+          <span>sudo nano /etc/network/interfaces</span>
+          <button onclick="copyToClipboard('sudo nano /etc/network/interfaces')" class="bg-slate-700 px-3 py-1 rounded text-xs">Copiar</button>
+        </div>
+
+        <p class="text-sm text-slate-600 pt-2">Deixe o arquivo configurado com este bloco (troque <code>eth0</code> pelo nome da sua placa se necessário):</p>
+        <div class="bg-slate-900 text-emerald-400 p-4 rounded-xl font-mono-code text-xs sm:text-sm relative">
+          <button onclick="copyToClipboard('auto lo\niface lo inet loopback\n\nauto eth0\niface eth0 inet static\n    address 192.168.10.10/24\n    gateway 192.168.10.1\n    dns-nameservers 1.1.1.1 8.8.8.8')" class="absolute top-3 right-3 bg-slate-800 text-slate-300 hover:text-white px-2 py-1 rounded text-xs">Copiar Bloco</button>
+          <pre># Interface local (Loopback)
+auto lo
+iface lo inet loopback
+
+# Placa de Rede Principal com IP Estático
+auto eth0
+iface eth0 inet static
+    address 192.168.10.10/24
+    gateway 192.168.10.1
+    dns-nameservers 1.1.1.1 8.8.8.8</pre>
+        </div>
+        <p class="text-xs text-slate-500">
+          Para salvar no Nano: pressione <kbd class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">Ctrl + O</kbd>, tecle <kbd class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">Enter</kbd> e depois saia com <kbd class="bg-slate-200 px-1.5 py-0.5 rounded text-slate-700">Ctrl + X</kbd>.
+        </p>
+      </div>
+
+      <!-- Passo 3: Aplicar e Testar -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 text-slate-700">3º Passo</span>
+          <span class="text-xs text-slate-400">Reiniciando a rede e testando conexão</span>
+        </div>
+        <p class="text-sm text-slate-600">Aplique as alterações sem precisar reiniciar o servidor:</p>
+        <div class="bg-terminal-bg text-white p-3 rounded-xl font-mono-code text-xs sm:text-sm flex justify-between items-center">
+          <span>sudo systemctl restart networking</span>
+          <button onclick="copyToClipboard('sudo systemctl restart networking')" class="bg-slate-700 px-3 py-1 rounded text-xs">Copiar</button>
+        </div>
+
+        <p class="text-sm text-slate-600 pt-2">Confira se o IP <code>192.168.10.10</code> apareceu na interface:</p>
+        <div class="bg-terminal-bg text-white p-3 rounded-xl font-mono-code text-xs sm:text-sm flex justify-between items-center">
+          <span>ip addr show eth0</span>
+          <button onclick="copyToClipboard('ip addr show eth0')" class="bg-slate-700 px-3 py-1 rounded text-xs">Copiar</button>
+        </div>
+
+        <p class="text-sm text-slate-600 pt-2">Valide o tráfego externo para a Internet:</p>
+        <div class="bg-terminal-bg text-white p-3 rounded-xl font-mono-code text-xs sm:text-sm flex justify-between items-center">
+          <span>ping -c 3 1.1.1.1</span>
+          <button onclick="copyToClipboard('ping -c 3 1.1.1.1')" class="bg-slate-700 px-3 py-1 rounded text-xs">Copiar</button>
+        </div>
+      </div>
+
+      <!-- AMPLIAÇÃO PEDAGÓGICA DA UNIDADE 4: DIAGNÓSTICO AVANÇADO E NETWORK BONDING -->
+      <div class="bg-white p-6 sm:p-7 rounded-2xl border-2 border-slate-200 shadow-sm space-y-7 mt-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div class="flex items-center space-x-3">
+            <div class="w-11 h-11 rounded-xl bg-debian text-white flex items-center justify-center text-xl shadow-md shadow-pink-500/20">
+              <i class="fa-solid fa-network-wired"></i>
+            </div>
+            <div>
+              <span class="text-[11px] font-bold text-debian uppercase tracking-wider bg-pink-50 px-2 py-0.5 rounded">Aprofundamento Prático</span>
+              <h3 class="text-lg sm:text-xl font-bold text-slate-900 leading-tight">Diagnóstico Avançado, Gestão de Redes e Network Bonding (Redundância)</h3>
+            </div>
+          </div>
+          <span class="text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-700 rounded-lg self-start sm:self-auto flex items-center gap-1.5">
+            <i class="fa-solid fa-clock text-debian"></i>
+            Carga Horária Prática: 8 Horas
+          </span>
+        </div>
+
+        <p class="text-sm text-slate-600 leading-relaxed">
+          Em servidores corporativos, o tráfego de rede precisa ser previsível e ininterrupto. Além de definir um IP estático, o administrador de sistemas precisa dominar o diagnóstico em camadas (físico, rota, resolução de nomes) e implementar <strong>alta disponibilidade física</strong> agrupando placas de rede em modo tolerante a falhas (<em>Network Bonding</em>).
+        </p>
+
+        <!-- Roteiro de Aprendizagem de Redes (10 Etapas) -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-list-check text-debian mr-1.5"></i>
+              Trilha de Competências em Redes Debian (10 Etapas)
+            </h4>
+            <span class="text-[10px] bg-slate-200 text-slate-700 font-mono px-2 py-0.5 rounded font-bold">Roteiro</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">1. Identificar</span>
+              <span class="text-slate-600 text-[11px]"><code>ip -br link</code></span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">2. Consultar Rota</span>
+              <span class="text-slate-600 text-[11px]"><code>ip route</code></span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">3. Configurar IP</span>
+              <span class="text-slate-600 text-[11px]"><code>/etc/network/interfaces</code></span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">4. Aplicar com Cuidado</span>
+              <span class="text-slate-600 text-[11px]"><code>ifdown / ifup</code></span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">5. Diagnosticar</span>
+              <span class="text-slate-600 text-[11px]"><code>ping / getent / ip neigh</code></span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">6. Múltiplas Interfaces</span>
+              <span class="text-slate-600 text-[11px]">Várias sub-redes</span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">7. Máscara & CIDR</span>
+              <span class="text-slate-600 text-[11px]">Notação <code>/24</code> vs <code>255.255.255.0</code></span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">8. Boas Práticas</span>
+              <span class="text-slate-600 text-[11px]">Backups & acesso via console</span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">9. Network Bonding</span>
+              <span class="text-slate-600 text-[11px]">Unificação com <code>ifenslave</code></span>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+              <span class="font-bold text-debian block font-mono text-[11px]">10. Teste de Falha</span>
+              <span class="text-slate-600 text-[11px]">Comutação dinâmica</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerta de Segurança Operacional ao Reiniciar Rede via SSH -->
+        <div class="p-4 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-950 space-y-2 text-xs">
+          <div class="font-bold text-sm text-amber-900 flex items-center">
+            <i class="fa-solid fa-triangle-exclamation text-amber-600 mr-2 text-base"></i>
+            Atenção Operacional: Risco de Perda de Acesso Remoto (SSH)
+          </div>
+          <p class="leading-relaxed">
+            Alterar arquivos de rede ou reiniciar o serviço <code class="font-mono bg-amber-100 px-1 rounded text-amber-900">networking</code> conectado exclusivamente via SSH pode <strong>derrubar a sua conexão</strong> e trancar você para fora do servidor caso haja um erro de sintaxe ou IP incorreto!
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <div class="p-2.5 bg-white rounded-lg border border-amber-200 space-y-1">
+              <strong>Regra 1: Cópia de Segurança Prévia</strong>
+              <code class="block font-mono text-[11px] bg-slate-100 p-1 rounded text-slate-800">sudo cp /etc/network/interfaces /etc/network/interfaces.bkp</code>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-amber-200 space-y-1">
+              <strong>Regra 2: Console Direta</strong>
+              <p class="text-[11px] text-slate-600">Em laboratórios ou na nuvem, execute mudanças drásticas através da janela de terminal da máquina virtual (VirtualBox/VMware/KVM) ou console web do provedor.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Diagnóstico Passo a Passo: Método Científico de Rede -->
+        <div class="space-y-3">
+          <div class="flex items-center space-x-2 text-slate-900 font-bold text-sm">
+            <span class="w-6 h-6 rounded-lg bg-slate-800 text-white flex items-center justify-center text-xs">A</span>
+            <span>Roteiro Científico de Diagnóstico de Rede no Debian</span>
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Quando a internet ou a rede interna falharem, siga rigorosamente esta sequência do nível mais baixo (físico) até o mais alto (resolução de nomes):
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <!-- Passo 1: Link Físico e IP -->
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between font-bold text-slate-800">
+                <span>1. Estado Físico & IP</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">Camada 2/3</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Verifique se a placa está com link UP e com o IP correto gravado:</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>ip -br addr</span>
+                <button onclick="copyToClipboard('ip -br addr')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+              <p class="text-[10px] text-slate-500">Se estiver <code>DOWN</code>, verifique o cabo de rede ou adaptador na VM.</p>
+            </div>
+
+            <!-- Passo 2: Gateway Padrão -->
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between font-bold text-slate-800">
+                <span>2. Tabela de Rotas</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">Gateway</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Confirme se a rota <code>default via</code> está apontando para o roteador:</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>ip route</span>
+                <button onclick="copyToClipboard('ip route')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+              <p class="text-[10px] text-slate-500">Sem rota default, o servidor não alcança a Internet nem outras sub-redes.</p>
+            </div>
+
+            <!-- Passo 3: Roteador Local -->
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between font-bold text-slate-800">
+                <span>3. Ping no Gateway</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">LAN</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Valide a comunicação com o roteador antes de testar a internet externa:</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>ping -c 3 192.168.10.1</span>
+                <button onclick="copyToClipboard('ping -c 3 192.168.10.1')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+              <p class="text-[10px] text-slate-500">Falha aqui indica erro de máscara (/24), IP duplicado ou cabo desconectado.</p>
+            </div>
+
+            <!-- Passo 4: IP Externo vs Domínio -->
+            <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex items-center justify-between font-bold text-slate-800">
+                <span>4. Resolução DNS</span>
+                <span class="text-[10px] bg-slate-200 px-1.5 py-0.5 rounded font-mono">Nomes</span>
+              </div>
+              <p class="text-slate-600 text-[11px]">Se o IP externo responde mas o nome falha, o erro é estritamente de DNS:</p>
+              <div class="bg-terminal-bg text-white p-2 rounded font-mono-code text-[11px] flex justify-between items-center">
+                <span>getent hosts debian.org</span>
+                <button onclick="copyToClipboard('getent hosts debian.org')" class="text-[10px] bg-slate-700 px-2 py-0.5 rounded">Copiar</button>
+              </div>
+              <p class="text-[10px] text-slate-500">Teste também inspecionando vizinhos ARP com <code>ip neigh</code>.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- NETWORK BONDING: UNIFICAÇÃO DE PLACAS FÍSICAS -->
+        <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6 sm:p-7 rounded-2xl border-2 border-debian/40 shadow-xl space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-xl bg-debian flex items-center justify-center text-white text-2xl shadow-md shadow-pink-500/30">
+                <i class="fa-solid fa-code-merge"></i>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold text-pink-300 uppercase tracking-wider bg-debian/30 px-2 py-0.5 rounded">Alta Disponibilidade • Módulo Avançado</span>
+                <h4 class="text-lg sm:text-xl font-bold text-white leading-tight">Network Bonding: Agrupamento e Redundância de Placas de Rede</h4>
+              </div>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-slate-800 text-slate-300 rounded-lg border border-slate-700">Tolerância a Falhas</span>
+          </div>
+
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            O <strong>Network Bonding</strong> agrupa duas ou mais placas físicas (ex: <code class="font-mono text-pink-300">enp0s3</code> e <code class="font-mono text-pink-300">enp0s8</code>) em uma única interface virtual lógica chamada <strong class="text-white font-mono">bond0</strong>. Se um cabo for rompido ou uma placa queimar, o tráfego comuta instantaneamente para a segunda placa sem interrupção de serviço!
+          </p>
+
+          <!-- Diagrama Visual de Bonding -->
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col items-center justify-center space-y-3">
+            <div class="px-5 py-2 rounded-xl bg-slate-800 border-2 border-slate-600 text-slate-200 text-xs font-bold flex items-center gap-2">
+              <i class="fa-brands fa-debian text-debian text-base"></i>
+              <span>Servidor Debian (IP: 192.168.10.10)</span>
+            </div>
+
+            <!-- Conectores visuais -->
+            <div class="w-48 sm:w-72 flex justify-between text-slate-500 text-xs font-mono">
+              <span>/</span>
+              <span>\</span>
+            </div>
+
+            <div class="flex items-center justify-center gap-4 sm:gap-12 w-full">
+              <div class="p-3 bg-slate-900 border border-slate-700 rounded-xl text-center space-y-1 w-36 sm:w-44">
+                <div class="text-[10px] uppercase font-bold text-slate-400">Placa Física 1</div>
+                <div class="font-mono font-bold text-sm text-pink-400">enp0s3</div>
+                <div class="text-[10px] text-emerald-400 font-semibold flex items-center justify-center gap-1">
+                  <i class="fa-solid fa-circle text-[8px]"></i> Ativa (Principal)
+                </div>
+              </div>
+
+              <div class="text-slate-600 font-bold text-lg">+</div>
+
+              <div class="p-3 bg-slate-900 border border-slate-700 rounded-xl text-center space-y-1 w-36 sm:w-44">
+                <div class="text-[10px] uppercase font-bold text-slate-400">Placa Física 2</div>
+                <div class="font-mono font-bold text-sm text-sky-400">enp0s8</div>
+                <div class="text-[10px] text-amber-400 font-semibold flex items-center justify-center gap-1">
+                  <i class="fa-solid fa-clock text-[8px]"></i> Em Espera (Backup)
+                </div>
+              </div>
+            </div>
+
+            <!-- Conectores visuais inferiores -->
+            <div class="w-48 sm:w-72 flex justify-between text-slate-500 text-xs font-mono">
+              <span>\</span>
+              <span>/</span>
+            </div>
+
+            <div class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-debian/20 via-pink-900/30 to-debian/20 border-2 border-debian text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-pink-500/10">
+              <i class="fa-solid fa-layer-group text-debian text-base"></i>
+              <span>Interface Lógica Unificada: bond0 (active-backup)</span>
+            </div>
+          </div>
+
+          <!-- Tabela dos Modos Mais Comuns de Bonding -->
+          <div class="space-y-2">
+            <h5 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-table-list text-pink-400 mr-1.5"></i>
+              Principais Modos de Funcionamento do Network Bonding
+            </h5>
+            <div class="overflow-x-auto border border-slate-700 rounded-xl">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-800 text-slate-300 font-bold uppercase tracking-wider text-[11px] border-b border-slate-700">
+                  <tr>
+                    <th class="px-3.5 py-2">Modo</th>
+                    <th class="px-3.5 py-2">Como Funciona?</th>
+                    <th class="px-3.5 py-2">Exige Switch Especial?</th>
+                    <th class="px-3.5 py-2">Finalidade Recomendada</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800 text-slate-300">
+                  <tr class="bg-pink-950/20">
+                    <td class="px-3.5 py-2.5 font-mono font-bold text-pink-400">active-backup (1)</td>
+                    <td class="px-3.5 py-2.5">Apenas uma placa trafega dados; a segunda assume instantaneamente se a primeira falhar.</td>
+                    <td class="px-3.5 py-2.5"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold">Não (Qualquer switch)</span></td>
+                    <td class="px-3.5 py-2.5 font-bold text-white">Ideal para servidores iniciantes & Redundância absoluta</td>
+                  </tr>
+                  <tr>
+                    <td class="px-3.5 py-2.5 font-mono font-bold text-sky-400">balance-rr (0)</td>
+                    <td class="px-3.5 py-2.5">Round-Robin: envia os pacotes sequencialmente (pacote 1 na placa A, pacote 2 na placa B).</td>
+                    <td class="px-3.5 py-2.5"><span class="px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-semibold">Exige porta agregada</span></td>
+                    <td class="px-3.5 py-2.5">Agregação de banda simples entre dois servidores diretos.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-3.5 py-2.5 font-mono font-bold text-purple-400">802.3ad (4)</td>
+                    <td class="px-3.5 py-2.5">Padrão da indústria LACP (Link Aggregation Control Protocol) negociado dinamicamente com o switch.</td>
+                    <td class="px-3.5 py-2.5"><span class="px-2 py-0.5 rounded bg-red-950 text-red-400 border border-red-800 font-semibold">Sim (Switch Gerenciável LACP)</span></td>
+                    <td class="px-3.5 py-2.5">Data Centers e ambientes corporativos de alto throughput.</td>
+                  </tr>
+                  <tr>
+                    <td class="px-3.5 py-2.5 font-mono font-bold text-emerald-400">balance-alb (6)</td>
+                    <td class="px-3.5 py-2.5">Adaptive Load Balancing: balanceia o envio e recepção modificando respostas ARP localmente.</td>
+                    <td class="px-3.5 py-2.5"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold">Não (Sem suporte no switch)</span></td>
+                    <td class="px-3.5 py-2.5">Aumento de banda em switches não gerenciáveis.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Passo a Passo de Implementação Prática do Bonding -->
+          <div class="space-y-3 pt-2 text-xs">
+            <h5 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-terminal text-pink-400 mr-1.5"></i>
+              Passo a Passo Prático: Configurando `bond0` no Debian
+            </h5>
+
+            <!-- Passo 1: Instalação -->
+            <div class="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-pink-400">1. Instalar o Utilitário de Ligação e Carregar o Módulo do Kernel</span>
+                <span class="text-[10px] text-slate-400 font-mono">ifenslave</span>
+              </div>
+              <p class="text-slate-300 text-[11px]">No Debian, a ferramenta que gerencia a escravização das placas é o <code class="font-mono bg-slate-900 px-1 rounded text-white">ifenslave</code>:</p>
+              <div class="bg-slate-950 p-2.5 rounded font-mono-code text-[11px] flex justify-between items-center border border-slate-800">
+                <span class="text-slate-200">sudo apt update && sudo apt install -y ifenslave && sudo modprobe bonding</span>
+                <button onclick="copyToClipboard('sudo apt update && sudo apt install -y ifenslave && sudo modprobe bonding')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+            </div>
+
+            <!-- Passo 2: Configurar o arquivo interfaces -->
+            <div class="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-pink-400">2. Estrutura do Arquivo `/etc/network/interfaces` com Bonding</span>
+                <span class="text-[10px] text-slate-400 font-mono">bond0 estático</span>
+              </div>
+              <p class="text-slate-300 text-[11px]">
+                <strong>Regra Crucial:</strong> As placas físicas escravizadas (<code class="font-mono text-white">enp0s3</code> e <code class="font-mono text-white">enp0s8</code>) <strong>não devem ter nenhum endereço IP</strong> configurado nelas. O IP estático vai exclusivamente na interface <code class="font-mono text-pink-300 font-bold">bond0</code>:
+              </p>
+              <div class="bg-slate-950 p-3 rounded-lg font-mono-code text-[11px] text-emerald-400 relative border border-slate-800">
+                <button onclick="copyToClipboard('auto lo\niface lo inet loopback\n\n# Interface Agrupada em Modo Redundante (Bonding)\nauto bond0\niface bond0 inet static\n    address 192.168.10.10/24\n    gateway 192.168.10.1\n    dns-nameservers 1.1.1.1 8.8.8.8\n    bond-slaves enp0s3 enp0s8\n    bond-mode active-backup\n    bond-miimon 100\n    bond-primary enp0s3')" class="absolute top-2.5 right-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-0.5 rounded text-[10px] font-sans">Copiar Bloco</button>
+                <pre># Interface Local
+auto lo
+iface lo inet loopback
+
+# Interface Agrupada em Modo Redundante (Bonding)
+auto bond0
+iface bond0 inet static
+    address 192.168.10.10/24
+    gateway 192.168.10.1
+    dns-nameservers 1.1.1.1 8.8.8.8
+    bond-slaves enp0s3 enp0s8
+    bond-mode active-backup
+    bond-miimon 100
+    bond-primary enp0s3</pre>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px] text-slate-300">
+                <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                  <strong class="text-pink-400">bond-slaves:</strong> Placas físicas que formam o time.
+                </div>
+                <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                  <strong class="text-pink-400">bond-miimon 100:</strong> Checa o link físico a cada 100 milissegundos.
+                </div>
+                <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                  <strong class="text-pink-400">bond-primary:</strong> Placa preferencial de tráfego prioritário.
+                </div>
+              </div>
+            </div>
+
+            <!-- Passo 3: Auditoria em Tempo Real -->
+            <div class="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-pink-400">3. Auditoria do Estado de Redundância no Kernel</span>
+                <span class="text-[10px] text-slate-400 font-mono">/proc/net/bonding/bond0</span>
+              </div>
+              <p class="text-slate-300 text-[11px]">
+                O Linux mantém um painel em tempo real da saúde das placas no sistema de arquivos virtual <code class="font-mono bg-slate-900 px-1 rounded text-white">/proc</code>:
+              </p>
+              <div class="bg-slate-950 p-2.5 rounded font-mono-code text-[11px] flex justify-between items-center border border-slate-800">
+                <span class="text-slate-200">cat /proc/net/bonding/bond0</span>
+                <button onclick="copyToClipboard('cat /proc/net/bonding/bond0')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <p class="text-[10px] text-slate-400">
+                A saída exibirá a <strong>Currently Active Slave</strong> (placa que está trafegando os dados agora) e a lista de <strong>Slave Interfaces</strong> vinculadas.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Laboratório Final da Unidade 4: Simulação de Falha Física de Rede -->
+        <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6 sm:p-7 rounded-2xl border-2 border-debian/50 shadow-xl space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700 pb-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-debian flex items-center justify-center text-white text-xl shadow-md">
+                <i class="fa-solid fa-plug-circle-xmark"></i>
+              </div>
+              <div>
+                <span class="text-[11px] font-bold text-pink-300 uppercase tracking-wider bg-debian/30 px-2 py-0.5 rounded">Desafio Prático Final</span>
+                <h4 class="text-base sm:text-lg font-bold text-white">Laboratório: Prova de Fogo da Tolerância a Falhas de Rede</h4>
+              </div>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">8 Etapas Sequenciais</span>
+          </div>
+
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+            Execute a sequência abaixo para comprovar na prática a resiliência do seu servidor Debian diante de uma interrupção física de cabo:
+          </p>
+
+          <div class="space-y-2 text-xs">
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">1. Identificar as duas placas de rede físicas disponíveis:</span>
+                <button onclick="copyToClipboard('ip -br link')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">ip -br link</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">2. Configurar o IP estático na bond0 e ativar o modo active-backup em `/etc/network/interfaces`.</span>
+              </div>
+              <div class="text-slate-400 text-[11px]">Edite com <code class="font-mono text-slate-300">sudo nano /etc/network/interfaces</code> conforme o modelo visto acima.</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">3. Reiniciar a rede ou subir a interface bond0:</span>
+                <button onclick="copyToClipboard('sudo systemctl restart networking && ip -br addr')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">sudo systemctl restart networking && ip -br addr</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">4. Confirmar qual das duas placas está como ativa no momento:</span>
+                <button onclick="copyToClipboard('cat /proc/net/bonding/bond0 | grep -i \'Currently Active Slave\'' )" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">cat /proc/net/bonding/bond0 | grep -i "Currently Active Slave"</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-pink-400 font-bold">5. Em outro terminal ou na mesma tela, inicie um ping contínuo para o Gateway:</span>
+                <button onclick="copyToClipboard('ping 192.168.10.1')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">ping 192.168.10.1</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-amber-400 font-bold">6. Simular o rompimento do cabo (desconecte o cabo da placa ativa ou use o comando):</span>
+                <button onclick="copyToClipboard('sudo ip link set enp0s3 down')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">sudo ip link set enp0s3 down</div>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-emerald-400 font-bold">7. Confirmar a comutação automática para a placa secundária:</span>
+                <button onclick="copyToClipboard('cat /proc/net/bonding/bond0 | grep -i \'Currently Active Slave\'' )" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">cat /proc/net/bonding/bond0 | grep -i "Currently Active Slave"</div>
+              <p class="text-[10px] text-emerald-400">O ping continuará respondendo com perda máxima de 1 ou 2 pacotes durante a transição!</p>
+            </div>
+
+            <div class="p-3 bg-slate-950/80 rounded-lg border border-slate-800 space-y-1">
+              <div class="flex justify-between items-center font-mono">
+                <span class="text-sky-400 font-bold">8. Reconectar o cabo da primeira placa e verificar o retorno ao estado preferencial:</span>
+                <button onclick="copyToClipboard('sudo ip link set enp0s3 up && cat /proc/net/bonding/bond0')" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300">Copiar</button>
+              </div>
+              <div class="text-slate-300 font-mono-code text-[11px]">sudo ip link set enp0s3 up && cat /proc/net/bonding/bond0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegação -->
+      <div class="flex justify-between pt-4">
+        <button onclick="switchTab('unit3')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i> Voltar à Unidade 3
+        </button>
+        <button onclick="switchTab('unit5')" class="px-6 py-2.5 rounded-xl bg-debian text-white font-bold hover:bg-debian-dark transition shadow-md shadow-pink-500/20 flex items-center space-x-2">
+          <span>Avançar: Terminal Interativo</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- UNIT 5: Terminal Interativo -->
+    <section id="unit5" class="tab-content space-y-6">
+      <div class="border-l-4 border-debian pl-4">
+        <span class="text-xs font-bold text-debian uppercase tracking-wider">Unidade 5</span>
+        <h2 class="text-2xl font-bold text-slate-900">Terminal Interativo: Simulador de Comandos Debian</h2>
+      </div>
+
+      <p class="text-sm text-slate-600 leading-relaxed">
+        Pratique os comandos aprendidos no Módulo 1 diretamente aqui sem risco de quebrar seu sistema operacional. Digite os comandos na barra inferior ou clique nos <strong>atalhos rápidos</strong> para testar a saída em tempo real!
+      </p>
+
+      <!-- Painel do Terminal Gráfico -->
+      <div class="bg-terminal-bg rounded-2xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+        <!-- Barra de Título do Terminal -->
+        <div class="bg-terminal-bar px-4 py-3 flex items-center justify-between border-b border-slate-700/60">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+            <span class="text-xs text-slate-400 font-mono-code ml-2 flex items-center gap-1.5">
+              <i class="fa-solid fa-terminal text-debian text-xs"></i>
+              aluno@debian-srv: ~ (bash 5.2)
+            </span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="runSimCommand('clear')" class="text-[11px] text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-md transition font-mono-code">
+              <i class="fa-solid fa-eraser mr-1"></i> Limpar Tela
+            </button>
+            <button onclick="runSimCommand('help')" class="text-[11px] text-pink-300 hover:text-white bg-debian/30 hover:bg-debian/50 px-2.5 py-1 rounded-md transition font-mono-code">
+              <i class="fa-solid fa-circle-question mr-1"></i> Comandos Suportados
+            </button>
+          </div>
+        </div>
+
+        <!-- Tela de Exibição / Histórico -->
+        <div id="terminalScreen" class="p-4 sm:p-5 font-mono-code text-xs sm:text-sm text-slate-200 overflow-y-auto space-y-2 min-h-[320px] max-h-[460px]">
+          <div class="text-slate-400">Debian GNU/Linux 12 (bookworm) - Terminal de Aprendizado Interativo.</div>
+          <div class="text-slate-400">Digite <span class="text-terminal-text font-bold">help</span> ou clique nos atalhos rápidos abaixo para testar os comandos deste módulo.</div>
+        </div>
+
+        <!-- Linha de Entrada de Comando -->
+        <div class="p-3 bg-slate-950 border-t border-slate-800 flex items-center gap-2">
+          <span id="promptIndicator" class="text-terminal-prompt font-mono-code font-bold text-xs sm:text-sm shrink-0">aluno@debian:~$</span>
+          <input 
+            type="text" 
+            id="termInput" 
+            placeholder="Digite um comando aqui (ex: whoami, ip route, apt show nginx)..." 
+            class="flex-1 bg-transparent text-white font-mono-code text-xs sm:text-sm focus:outline-none border-0 placeholder:text-slate-600"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button 
+            onclick="submitTermInput()" 
+            class="px-4 py-1.5 bg-debian hover:bg-debian-dark text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-sm shadow-pink-500/20">
+            <span>Executar</span>
+            <i class="fa-solid fa-arrow-turn-down text-[10px]"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Atalhos Rápidos Clicáveis -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <span class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center">
+            <i class="fa-solid fa-bolt text-amber-500 mr-1.5"></i>
+            Atalhos Rápidos: Clique para Executar no Terminal Imediatamente
+          </span>
+          <span class="text-[11px] text-slate-400">Clique para testar sem precisar digitar</span>
+        </div>
+
+        <!-- Grupos de Atalhos -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs font-mono-code">
+          <!-- Bloco 1: Identidade e Permissões -->
+          <div class="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-500 font-sans">Identidade & Permissões</div>
+            <button onclick="executeQuick('whoami')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">whoami</button>
+            <button onclick="executeQuick('id')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">id</button>
+            <button onclick="executeQuick('sudo -l')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">sudo -l</button>
+            <button onclick="executeQuick('su -')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate text-red-600 font-bold">su - (modo root)</button>
+            <button onclick="executeQuick('exit')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">exit (sair root)</button>
+          </div>
+
+          <!-- Bloco 2: Gestão APT -->
+          <div class="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-500 font-sans">Gerenciador APT</div>
+            <button onclick="executeQuick('sudo apt update')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">sudo apt update</button>
+            <button onclick="executeQuick('sudo apt upgrade -y')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">sudo apt upgrade -y</button>
+            <button onclick="executeQuick('apt list --installed')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">apt list --installed</button>
+            <button onclick="executeQuick('apt show nginx')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">apt show nginx</button>
+            <button onclick="executeQuick('apt policy nginx')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">apt policy nginx</button>
+          </div>
+
+          <!-- Bloco 3: Rede Básica -->
+          <div class="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-500 font-sans">Rede & Conectividade</div>
+            <button onclick="executeQuick('ip -br link')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">ip -br link</button>
+            <button onclick="executeQuick('ip addr show')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">ip addr show</button>
+            <button onclick="executeQuick('ip route')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">ip route</button>
+            <button onclick="executeQuick('ping -c 3 1.1.1.1')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">ping -c 3 1.1.1.1</button>
+            <button onclick="executeQuick('getent hosts debian.org')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">getent hosts debian.org</button>
+          </div>
+
+          <!-- Bloco 4: Network Bonding -->
+          <div class="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] uppercase font-bold text-slate-500 font-sans">Alta Disponibilidade</div>
+            <button onclick="executeQuick('cat /proc/net/bonding/bond0')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate text-debian font-bold">cat /proc/net/bonding/bond0</button>
+            <button onclick="executeQuick('apt depends nginx')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">apt depends nginx</button>
+            <button onclick="executeQuick('help')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">help (todos comandos)</button>
+            <button onclick="executeQuick('clear')" class="w-full text-left px-2 py-1 rounded bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 transition truncate">clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegação -->
+      <div class="flex justify-between pt-4">
+        <button onclick="switchTab('unit4')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i> Voltar à Unidade 4
+        </button>
+        <button onclick="switchTab('unit6')" class="px-6 py-2.5 rounded-xl bg-debian text-white font-bold hover:bg-debian-dark transition shadow-md shadow-pink-500/20 flex items-center space-x-2">
+          <span>Avançar: Dicionário Técnico</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- UNIT 6: Dicionário & Conceitos -->
+    <section id="unit6" class="tab-content space-y-6">
+      <div class="border-l-4 border-debian pl-4">
+        <span class="text-xs font-bold text-debian uppercase tracking-wider">Unidade 6</span>
+        <h2 class="text-2xl font-bold text-slate-900">Dicionário de Comandos e Parâmetros do Módulo 1</h2>
+      </div>
+
+      <p class="text-sm text-slate-600">
+        Consulte esta tabela para entender exatamente o que cada letra e parâmetro significa quando você digita no terminal:
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Comando: su - -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-debian text-sm sm:text-base">su -</span>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">Privilégios</span>
+          </div>
+          <p class="text-xs text-slate-600">
+            <strong>O que significa:</strong> <em>Switch User</em> (trocar de usuário). O hífen (<code class="bg-slate-100 px-1 rounded">-</code>) é fundamental: ele carrega todas as variáveis de ambiente e o caminho dos comandos de administrador (como <code>/sbin</code> e <code>/usr/sbin</code>).
+          </p>
+        </div>
+
+        <!-- Comando: usermod -aG -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-debian text-sm sm:text-base">usermod -aG sudo [user]</span>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">Grupos</span>
+          </div>
+          <p class="text-xs text-slate-600">
+            <strong>O que significa:</strong> <br>
+            • <code class="font-bold text-debian">-a</code> (Append): Adiciona sem remover o usuário dos outros grupos.<br>
+            • <code class="font-bold text-debian">-G</code> (Group): Define o grupo secundário ao qual ele pertencerá (neste caso, o grupo administrativo <code>sudo</code>).
+          </p>
+        </div>
+
+        <!-- Comando: apt update vs upgrade -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-debian text-sm sm:text-base">apt update && apt upgrade -y</span>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">Pacotes</span>
+          </div>
+          <p class="text-xs text-slate-600">
+            <strong>O que significa:</strong> <br>
+            • <code>&&</code>: Executa o segundo comando apenas se o primeiro der certo.<br>
+            • <code>-y</code> (Yes): Responde "sim" automaticamente para a pergunta de confirmação de download.
+          </p>
+        </div>
+
+        <!-- Comando: ip -br link -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-debian text-sm sm:text-base">ip -br link</span>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">Rede</span>
+          </div>
+          <p class="text-xs text-slate-600">
+            <strong>O que significa:</strong> <br>
+            • <code class="font-bold text-debian">-br</code> (Brief): Mostra uma saída resumida e limpa em uma só linha por placa, facilitando ver se a placa está <code>UP</code> (ligada) ou <code>DOWN</code> (desconectada).
+          </p>
+        </div>
+
+        <!-- Comando: ping -c 3 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-debian text-sm sm:text-base">ping -c 3 [ip]</span>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">Diagnóstico</span>
+          </div>
+          <p class="text-xs text-slate-600">
+            <strong>O que significa:</strong> No Linux, o comando ping roda infinitamente até você apertar Ctrl+C. O parâmetro <code class="font-bold text-debian">-c 3</code> (Count) limita o envio a exatamente 3 pacotes e encerra sozinho.
+          </p>
+        </div>
+
+        <!-- Comando: systemctl -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-mono font-bold text-debian text-sm sm:text-base">systemctl restart networking</span>
+            <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">Serviços</span>
+          </div>
+          <p class="text-xs text-slate-600">
+            <strong>O que significa:</strong> Comunica-se com o <em>systemd</em> (o orquestrador do sistema) para reiniciar o daemon responsável pelas placas de rede e aplicar novas configurações sem reiniciar a máquina.
+          </p>
+        </div>
+      </div>
+
+      <!-- Navegação -->
+      <div class="flex justify-between pt-4">
+        <button onclick="switchTab('unit5')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i> Voltar ao Terminal
+        </button>
+        <button onclick="switchTab('unit7')" class="px-6 py-2.5 rounded-xl bg-debian text-white font-bold hover:bg-debian-dark transition shadow-md shadow-pink-500/20 flex items-center space-x-2">
+          <span>Avançar: Quiz de Fixação</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- UNIT 7: Quiz de Fixação -->
+    <section id="unit7" class="tab-content space-y-6">
+      <div class="border-l-4 border-debian pl-4">
+        <span class="text-xs font-bold text-debian uppercase tracking-wider">Unidade 7</span>
+        <h2 class="text-2xl font-bold text-slate-900">Quiz de Fixação do Módulo 1</h2>
+      </div>
+
+      <p class="text-sm text-slate-600">
+        Responda às questões abaixo para testar sua compreensão antes de avançar para a videoaula e para o Módulo 2 (SSH):
+      </p>
+
+      <div class="space-y-4">
+        <!-- Pergunta 1 -->
+        <div id="q1-box" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <p class="text-sm font-bold text-slate-800">1. Qual é o arquivo de texto responsável por configurar os endereços IP estáticos das interfaces de rede no Debian?</p>
+          <div class="space-y-2 text-xs">
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q1" value="a" class="text-debian">
+              <span>/etc/resolv.conf</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q1" value="b" class="text-debian">
+              <span>/etc/network/interfaces</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q1" value="c" class="text-debian">
+              <span>/etc/hosts</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Pergunta 2 -->
+        <div id="q2-box" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <p class="text-sm font-bold text-slate-800">2. Por que executamos <code>apt update</code> antes de <code>apt upgrade</code>?</p>
+          <div class="space-y-2 text-xs">
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q2" value="a" class="text-debian">
+              <span>Para atualizar a lista e o catálogo de versões dos repositórios antes de baixar as atualizações reais.</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q2" value="b" class="text-debian">
+              <span>Para limpar arquivos temporários do disco rígido.</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q2" value="c" class="text-debian">
+              <span>Porque o comando upgrade não funciona se a internet estiver desconectada.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Pergunta 3 -->
+        <div id="q3-box" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <p class="text-sm font-bold text-slate-800">3. Qual a notação numérica correspondente às permissões <code>rwxr-x---</code> em um script?</p>
+          <div class="space-y-2 text-xs">
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q3" value="a" class="text-debian">
+              <span>644</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q3" value="b" class="text-debian">
+              <span>755</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q3" value="c" class="text-debian">
+              <span>750</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Pergunta 4 -->
+        <div id="q4-box" class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <p class="text-sm font-bold text-slate-800">4. Qual é a principal razão pela qual servidores corporativos operam sem interface gráfica (modo Headless)?</p>
+          <div class="space-y-2 text-xs">
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q4" value="a" class="text-debian">
+              <span>Para economizar memória RAM, aumentar a estabilidade e diminuir a superfície de vulnerabilidades do sistema.</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q4" value="b" class="text-debian">
+              <span>Porque o Linux não tem suporte a monitores modernos.</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer">
+              <input type="radio" name="q4" value="c" class="text-debian">
+              <span>Porque as placas de vídeo queimam se ficarem ligadas em servidores.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão de Correção -->
+      <div class="pt-2">
+        <button onclick="correctQuiz()" class="px-6 py-3 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition flex items-center space-x-2 text-xs sm:text-sm">
+          <i class="fa-solid fa-check"></i>
+          <span>Corrigir Minhas Respostas</span>
+        </button>
+      </div>
+
+      <!-- Feedback do Quiz -->
+      <div id="quizResult" class="hidden p-5 rounded-2xl border text-sm space-y-2"></div>
+
+      <!-- Navegação -->
+      <div class="flex justify-between pt-4">
+        <button onclick="switchTab('unit6')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i> Voltar ao Dicionário
+        </button>
+        <button onclick="switchTab('unit8')" class="px-6 py-2.5 rounded-xl bg-debian text-white font-bold hover:bg-debian-dark transition shadow-md shadow-pink-500/20 flex items-center space-x-2">
+          <span>Avançar: Aula Gravada em Vídeo</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- UNIT 8: Aula Gravada (Vídeo) -->
+    <section id="unit8" class="tab-content space-y-6">
+      <div class="border-l-4 border-debian pl-4">
+        <span class="text-xs font-bold text-debian uppercase tracking-wider">Unidade 8</span>
+        <h2 class="text-2xl font-bold text-slate-900">Aula Gravada em Vídeo: Passo a Passo do Módulo 1</h2>
+      </div>
+
+      <div class="p-4 rounded-xl bg-pink-50 border border-pink-200 text-slate-700 text-xs sm:text-sm flex items-start space-x-3">
+        <i class="fa-solid fa-video text-debian text-base mt-0.5 shrink-0"></i>
+        <div>
+          <strong>Área da Videoaula:</strong> Assista à gravação prática da aula com todos os comandos sendo executados em tempo real na tela do Debian Server. Você pode colar a URL do seu próprio vídeo gravado abaixo caso deseje atualizar a transmissão.
+        </div>
+      </div>
+
+      <!-- Painel do Player do YouTube -->
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div class="flex items-center space-x-2">
+            <i class="fa-brands fa-youtube text-red-600 text-xl"></i>
+            <h3 class="font-bold text-slate-900 text-sm sm:text-base">Transmissão da Aula Prática</h3>
+          </div>
+          <span class="text-xs text-slate-500 font-medium">Player Oficial Integrado</span>
+        </div>
+
+        <!-- Container do Vídeo 16:9 Responsivo -->
+        <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-slate-900 shadow-inner border border-slate-800">
+          <iframe 
+            id="youtubePlayer"
+            class="w-full h-full"
+            src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0" 
+            title="Videoaula do Módulo 1" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            allowfullscreen>
+          </iframe>
+        </div>
+
+        <!-- Formulário Dinâmico para Atualizar o Link do YouTube -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <label for="customYoutubeInput" class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-link text-slate-500"></i>
+              Link da Aula Gravada no YouTube:
+            </label>
+            <span class="text-[11px] text-slate-400">Cole o link completo do vídeo</span>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input 
+              type="text" 
+              id="customYoutubeInput" 
+              placeholder="Ex: https://www.youtube.com/watch?v=SEU_ID ou https://youtu.be/SEU_ID" 
+              class="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-debian bg-white text-slate-800 shadow-sm font-mono"
+            >
+            <button 
+              onclick="updateYoutubeVideo()" 
+              class="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition shadow-sm flex items-center justify-center space-x-2 shrink-0">
+              <i class="fa-brands fa-youtube"></i>
+              <span>Carregar Vídeo</span>
+            </button>
+          </div>
+
+          <div class="text-[11px] text-slate-500 flex items-center justify-between flex-wrap gap-2 pt-1">
+            <span>Link direto alternativo: <a id="directYoutubeLink" href="https://youtu.be/dQw4w9WgXcQ" target="_blank" rel="noopener noreferrer" class="text-debian underline font-mono">Abrir no YouTube</a></span>
+            <span class="text-slate-400">O vídeo salvo persistirá automaticamente nas próximas sessões.</span>
+          </div>
+        </div>
+
+        <!-- Capítulos da Aula -->
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+          <span class="font-bold text-slate-800 block">Capítulos e Minutagem da Videoaula:</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+            <div class="p-2 bg-white rounded-lg border border-slate-200"><strong>00:00:</strong> Apresentação e Boas-Vindas</div>
+            <div class="p-2 bg-white rounded-lg border border-slate-200"><strong>12:45:</strong> Configuração do sudo e Root</div>
+            <div class="p-2 bg-white rounded-lg border border-slate-200"><strong>28:10:</strong> Dominando o Gerenciador APT</div>
+            <div class="p-2 bg-white rounded-lg border border-slate-200"><strong>45:30:</strong> Configuração de IP Estático e Testes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegação Final -->
+      <div class="flex justify-between pt-4">
+        <button onclick="switchTab('unit7')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold transition">
+          <i class="fa-solid fa-arrow-left mr-2"></i> Voltar ao Quiz
+        </button>
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl flex items-center">
+            <i class="fa-solid fa-circle-check mr-1.5"></i> Módulo 1 Concluído! Pronto para o Módulo 2 (SSH)
+          </span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+      <div class="flex items-center space-x-2">
+        <i class="fa-brands fa-debian text-debian text-lg"></i>
+        <span>Ambiente de Capacitação em Servidores Debian - Módulo 1</span>
+      </div>
+      <div>
+        <span>Pronto para o Módulo 2: <strong>Acesso Remoto Seguro com SSH</strong></span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Notification Toast for Copying -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs flex items-center space-x-2 opacity-0 pointer-events-none transition-all duration-300 z-50">
+    <i class="fa-solid fa-check text-emerald-400"></i>
+    <span id="toastMsg">Comando copiado para a área de transferência!</span>
+  </div>
+
+  <script>
+    // Module Progress State (SCORM-like LocalStorage)
+    const state = {
+      visitedUnits: new Set(['unit1']),
+      quizCompleted: false,
+      score: 0
+    };
+
+    // Show Toast Notification
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      if (!toast || !toastMsg) return;
+      toastMsg.innerText = message;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    // Copy to Clipboard Fallback
+    function copyToClipboard(text) {
+      if (!text) return;
+      const tempInput = document.createElement('textarea');
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast('Comando copiado para a área de transferência!');
+      } catch (err) {
+        showToast('Não foi possível copiar automaticamente.');
+      }
+      document.body.removeChild(tempInput);
+    }
+
+    // Switch Tabs / SCORM Units
+    function switchTab(unitId) {
+      const sections = document.querySelectorAll('.tab-content');
+      sections.forEach(sec => sec.classList.remove('active'));
+
+      const target = document.getElementById(unitId);
+      if (target) {
+        target.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      const navButtons = document.querySelectorAll('.step-btn');
+      navButtons.forEach(btn => {
+        btn.classList.remove('bg-white', 'text-debian', 'border-pink-200', 'shadow-sm');
+        btn.classList.add('text-slate-600');
+        const badge = btn.querySelector('span:first-child');
+        if (badge) {
+          badge.classList.remove('bg-debian', 'text-white');
+          badge.classList.add('bg-slate-300', 'text-slate-700');
+        }
+      });
+
+      const activeBtn = document.getElementById('nav-' + unitId);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-600');
+        activeBtn.classList.add('bg-white', 'text-debian', 'border', 'border-pink-200', 'shadow-sm');
+        const badge = activeBtn.querySelector('span:first-child');
+        if (badge) {
+          badge.classList.remove('bg-slate-300', 'text-slate-700');
+          badge.classList.add('bg-debian', 'text-white');
+        }
+      }
+
+      state.visitedUnits.add(unitId);
+      saveState();
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const totalSteps = 8;
+      if (state.quizCompleted && !state.visitedUnits.has('unit7')) {
+        state.visitedUnits.add('unit7');
+      }
+      const percent = Math.min(Math.round((state.visitedUnits.size / totalSteps) * 100), 100);
+      const progressBar = document.getElementById('progressBar');
+      const progressText = document.getElementById('progressText');
+      if (progressBar) progressBar.style.width = percent + '%';
+      if (progressText) progressText.innerText = percent + '% Concluído';
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem('modulo1_visited', JSON.stringify(Array.from(state.visitedUnits)));
+        localStorage.setItem('modulo1_quiz', JSON.stringify({ completed: state.quizCompleted, score: state.score }));
+      } catch (e) {}
+    }
+
+    function loadSavedState() {
+      try {
+        const visited = localStorage.getItem('modulo1_visited');
+        if (visited) {
+          const arr = JSON.parse(visited);
+          if (Array.isArray(arr)) {
+            arr.forEach(u => state.visitedUnits.add(u));
+          }
+        }
+        const quiz = localStorage.getItem('modulo1_quiz');
+        if (quiz) {
+          const parsed = JSON.parse(quiz);
+          state.quizCompleted = parsed.completed || false;
+          state.score = parsed.score || 0;
+        }
+      } catch (e) {}
+    }
+
+    function resetProgress() {
+      state.visitedUnits = new Set(['unit1']);
+      state.quizCompleted = false;
+      state.score = 0;
+      try {
+        localStorage.removeItem('modulo1_visited');
+        localStorage.removeItem('modulo1_quiz');
+      } catch (e) {}
+      switchTab('unit1');
+      showToast('Progresso reiniciado com sucesso!');
+    }
+
+    // Terminal Simulator Execution
+    function appendTerminalOutput(cmd, outputHtml) {
+      const screen = document.getElementById('terminalScreen');
+      if (!screen) return;
+
+      const isRoot = currentPromptMode === 'root';
+      const promptText = isRoot ? 'root@debian:~#' : 'aluno@debian:~$';
+      const promptColor = isRoot ? 'text-red-400' : 'text-terminal-prompt';
+
+      const cmdLine = document.createElement('div');
+      cmdLine.innerHTML = `<span class="${promptColor} font-bold">${promptText}</span> <span class="text-white">${escapeHtml(cmd)}</span>`;
+      screen.appendChild(cmdLine);
+
+      if (outputHtml) {
+        const outDiv = document.createElement('div');
+        outDiv.className = 'text-slate-300 text-xs py-1 whitespace-pre-wrap';
+        outDiv.innerHTML = outputHtml;
+        screen.appendChild(outDiv);
+      }
+
+      screen.scrollTop = screen.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    let currentPromptMode = 'aluno';
+
+    function setPromptMode(mode) {
+      currentPromptMode = mode;
+      const indicator = document.getElementById('promptIndicator');
+      if (indicator) {
+        if (mode === 'root') {
+          indicator.innerText = 'root@debian:~#';
+          indicator.className = 'text-red-400 font-mono-code font-bold text-xs sm:text-sm shrink-0';
+        } else {
+          indicator.innerText = 'aluno@debian:~$';
+          indicator.className = 'text-terminal-prompt font-mono-code font-bold text-xs sm:text-sm shrink-0';
+        }
+      }
+    }
+
+    function executeQuick(cmd) {
+      runSimCommand(cmd);
+    }
+
+    function submitTermInput() {
+      const termInput = document.getElementById('termInput');
+      if (!termInput) return;
+      const val = termInput.value;
+      if (val.trim() !== '') {
+        runSimCommand(val);
+        termInput.value = '';
+      }
+    }
+
+    function runSimCommand(cmd) {
+      const trimmed = cmd.trim();
+      const screen = document.getElementById('terminalScreen');
+      if (!screen) return;
+
+      if (trimmed.toLowerCase() === 'clear') {
+        screen.innerHTML = `
+          <div class="text-slate-400">Debian GNU/Linux 12 (bookworm) - Terminal de Aprendizado Interativo.</div>
+          <div class="text-slate-400">Digite <span class="text-terminal-text font-bold">help</span> para listar os comandos aceitos.</div>
+        `;
+        return;
+      }
+
+      if (trimmed.toLowerCase() === 'help') {
+        const helpText = `Comandos interativos simulados disponíveis:
+  <span class="text-terminal-prompt">whoami</span>                   : Exibe o usuário atual logado
+  <span class="text-terminal-prompt">id</span>                       : Exibe UID, GID e grupos da conta
+  <span class="text-terminal-prompt">sudo -l</span>                  : Lista permissões permitidas com sudo
+  <span class="text-terminal-prompt">su -</span>                     : Alterna para a sessão do superusuário root
+  <span class="text-terminal-prompt">exit</span>                     : Sai do modo root ou encerra sessão
+  <span class="text-terminal-prompt">sudo apt update</span>         : Baixa o índice atualizado dos repositórios
+  <span class="text-terminal-prompt">sudo apt upgrade -y</span>      : Atualiza os pacotes instalados
+  <span class="text-terminal-prompt">apt show nginx</span>           : Exibe metadados, versão e descrição do pacote
+  <span class="text-terminal-prompt">apt policy nginx</span>         : Mostra a origem e prioridade do repositório
+  <span class="text-terminal-prompt">apt depends nginx</span>        : Lista as dependências do software
+  <span class="text-terminal-prompt">apt list --installed</span>    : Lista softwares instalados no sistema
+  <span class="text-terminal-prompt">ip -br link</span>              : Status resumido das placas de rede físicas
+  <span class="text-terminal-prompt">ip addr show</span>             : Lista endereços IP e sub-redes ativas
+  <span class="text-terminal-prompt">ip route</span>                 : Exibe a tabela de rotas e o gateway padrão
+  <span class="text-terminal-prompt">ping -c 3 1.1.1.1</span>        : Envia 3 pacotes de teste para a Internet
+  <span class="text-terminal-prompt">getent hosts debian.org</span>  : Testa a resolução de nomes (DNS)
+  <span class="text-terminal-prompt">cat /proc/net/bonding/bond0</span>: Inspeciona o estado da agregação e placa ativa
+  <span class="text-terminal-prompt">clear</span>                    : Limpa a tela do terminal`;
+        appendTerminalOutput(cmd, helpText);
+        return;
+      }
+
+      // Identidade e Permissões
+      if (trimmed === 'whoami') {
+        appendTerminalOutput(cmd, currentPromptMode === 'root' ? 'root' : 'aluno');
+        return;
+      }
+
+      if (trimmed === 'id' || trimmed === 'id aluno') {
+        const out = currentPromptMode === 'root'
+          ? `uid=0(root) gid=0(root) grupos=0(root)`
+          : `uid=1000(aluno) gid=1000(aluno) grupos=1000(aluno),27(sudo),1001(ti)`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'sudo -l') {
+        const out = `Matching Defaults entries for aluno on debian-srv:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin\\:/usr/local/bin\\:/usr/sbin\\:/usr/bin\\:/sbin\\:/bin
+
+User aluno may run the following commands on debian-srv:
+    <span class="text-emerald-400 font-bold">(ALL : ALL) ALL</span>`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'su -') {
+        setPromptMode('root');
+        appendTerminalOutput(cmd, `<span class="text-slate-400">Password: [senha verificada]</span>
+<span class="text-red-400 font-bold">root@debian:~#</span> Sessão de superusuário iniciada com sucesso. Variáveis e /sbin carregados.`);
+        return;
+      }
+
+      if (trimmed === 'exit') {
+        if (currentPromptMode === 'root') {
+          setPromptMode('aluno');
+          appendTerminalOutput(cmd, `<span class="text-slate-400">logout</span>
+Retornando à conta padrão (aluno).`);
+        } else {
+          appendTerminalOutput(cmd, `<span class="text-slate-400">logout (sessão mantida para continuidade da aula).</span>`);
+        }
+        return;
+      }
+
+      // APT e Pacotes
+      if (trimmed === 'sudo apt update' || trimmed === 'apt update') {
+        const out = `Hit:1 http://deb.debian.org/debian bookworm InRelease
+Get:2 http://security.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+Get:3 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Fetched 103 kB in 1s (98.2 kB/s)
+Reading package lists... Done
+Building dependency tree... Done
+<span class="text-emerald-400 font-bold">All packages are up to date.</span>`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed.startsWith('sudo apt upgrade') || trimmed.startsWith('apt upgrade')) {
+        const out = `Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+Calculating upgrade... Done
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+<span class="text-emerald-400">O sistema já está com as versões mais seguras e recentes.</span>`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'apt show nginx') {
+        const out = `Package: nginx
+Version: 1.22.1-9
+Priority: optional
+Section: httpd
+Maintainer: Debian Nginx Maintainers &lt;pkg-nginx-maintainers@alioth-lists.debian.net&gt;
+Installed-Size: 1,385 kB
+Depends: libc6 (&gt;= 2.34), libcrypt1, libpcre2-8-0, libssl3, zlib1g, nginx-common
+Homepage: https://nginx.org
+Description: small, powerful, scalable web/proxy server
+ Nginx is a web server designed for high performance, high concurrency
+ and low memory usage.`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'apt policy nginx') {
+        const out = `nginx:
+  Installed: (none)
+  Candidate: 1.22.1-9
+  Version table:
+     1.22.1-9 500
+        500 http://deb.debian.org/debian bookworm/main amd64 Packages`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'apt depends nginx') {
+        const out = `nginx
+  Depends: libc6 (&gt;= 2.34)
+  Depends: libcrypt1 (&gt;= 1:4.1.0)
+  Depends: libpcre2-8-0 (&gt;= 10.22)
+  Depends: libssl3 (&gt;= 3.0.0)
+  Depends: zlib1g (&gt;= 1:1.1.4)
+  Depends: nginx-common (= 1.22.1-9)
+  Suggests: nginx-doc`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'apt list --installed') {
+        const out = `Listing... Done
+base-files/stable,now 12.4+deb12u5 amd64 [installed]
+bash/stable,now 5.2.15-2+b2 amd64 [installed]
+curl/stable,now 7.88.1-10+deb12u5 amd64 [installed]
+iproute2/stable,now 6.1.0-3 amd64 [installed]
+sudo/stable,now 1.9.13p3-1+deb12u1 amd64 [installed]
+systemd/stable,now 252.22-1~deb12u1 amd64 [installed]
+... [245 pacotes essenciais ativos no Debian Server]`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      // Rede e Bonding
+      if (trimmed === 'ip -br link') {
+        const out = `lo               UNKNOWN        00:00:00:00:00:00 &lt;LOOPBACK,UP,LOWER_UP&gt; 
+enp0s3           UP             08:00:27:3e:bc:12 &lt;BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP&gt; 
+enp0s8           UP             08:00:27:fa:19:80 &lt;BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP&gt; 
+bond0            UP             08:00:27:3e:bc:12 &lt;BROADCAST,MULTICAST,MASTER,UP,LOWER_UP&gt;`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'ip addr show' || trimmed === 'ip a' || trimmed === 'ip addr') {
+        const out = `1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    inet 127.0.0.1/8 scope host lo
+2: enp0s3: &lt;BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP&gt; mtu 1500 master bond0 state UP
+3: enp0s8: &lt;BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP&gt; mtu 1500 master bond0 state UP
+4: bond0: &lt;BROADCAST,MULTICAST,MASTER,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP
+    inet <span class="text-pink-400 font-bold">192.168.10.10/24</span> brd 192.168.10.255 scope global bond0
+       valid_lft forever preferred_lft forever`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'ip route' || trimmed === 'ip r') {
+        const out = `<span class="text-emerald-400 font-bold">default via 192.168.10.1 dev bond0 onlink</span> 
+192.168.10.0/24 dev bond0 proto kernel scope link src 192.168.10.10`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed.startsWith('ping -c 3')) {
+        const target = trimmed.split(' ')[3] || '1.1.1.1';
+        const out = `PING ${target} (${target}) 56(84) bytes of data.
+64 bytes from ${target}: icmp_seq=1 ttl=57 time=12.4 ms
+64 bytes from ${target}: icmp_seq=2 ttl=57 time=11.8 ms
+64 bytes from ${target}: icmp_seq=3 ttl=57 time=12.1 ms
+
+--- ${target} ping statistics ---
+3 packets transmitted, <span class="text-emerald-400 font-bold">3 received, 0% packet loss</span>, time 2003ms
+rtt min/avg/max/mdev = 11.812/12.104/12.421/0.250 ms`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed.startsWith('getent hosts')) {
+        const host = trimmed.split(' ')[2] || 'debian.org';
+        const out = `151.101.194.132  ${host}
+151.101.66.132   ${host}
+<span class="text-emerald-400">[OK] Resolução DNS concluída com sucesso via servidores em /etc/resolv.conf.</span>`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      if (trimmed === 'cat /proc/net/bonding/bond0') {
+        const out = `Ethernet Channel Bonding Driver: v6.1.0-21-amd64
+
+Bonding Mode: <span class="text-pink-400 font-bold">fault-tolerance (active-backup)</span>
+Primary Slave: enp0s3 (primary_reselect always)
+Currently Active Slave: <span class="text-emerald-400 font-bold">enp0s3</span>
+MII Status: up
+MII Polling Interval (ms): 100
+Up Delay (ms): 0
+Down Delay (ms): 0
+
+Slave Interface: <span class="text-white font-bold">enp0s3</span>
+MII Status: up
+Speed: 1000 Mbps
+Duplex: full
+Link Failure Count: 0
+
+Slave Interface: <span class="text-white font-bold">enp0s8</span>
+MII Status: up
+Speed: 1000 Mbps
+Duplex: full
+Link Failure Count: 0`;
+        appendTerminalOutput(cmd, out);
+        return;
+      }
+
+      appendTerminalOutput(cmd, `<span class="text-amber-400">bash: ${escapeHtml(trimmed)}: comando simulado não encontrado. Digite <strong class="text-white">help</strong> para a lista de comandos suportados.</span>`);
+    }
+
+    // Quiz Correction
+    function correctQuiz() {
+      const answers = {
+        q1: 'b',
+        q2: 'a',
+        q3: 'c',
+        q4: 'a'
+      };
+
+      let score = 0;
+      let allAnswered = true;
+
+      for (let i = 1; i <= 4; i++) {
+        const selected = document.querySelector(`input[name="q${i}"]:checked`);
+        const box = document.getElementById(`q${i}-box`);
+        if (!selected) {
+          allAnswered = false;
+          if (box) box.classList.add('border-amber-400');
+          continue;
+        }
+
+        if (box) box.classList.remove('border-amber-400', 'border-emerald-500', 'border-red-400');
+
+        if (selected.value === answers[`q${i}`]) {
+          score++;
+          if (box) box.classList.add('border-emerald-500', 'bg-emerald-50/20');
+        } else {
+          if (box) box.classList.add('border-red-400', 'bg-red-50/20');
+        }
+      }
+
+      const resultBox = document.getElementById('quizResult');
+      if (!allAnswered) {
+        resultBox.className = 'p-5 rounded-2xl border text-sm space-y-2 block bg-amber-50 border-amber-300 text-amber-900';
+        resultBox.innerHTML = `<strong>Atenção:</strong> Responda todas as 4 questões antes de submeter.`;
+        return;
+      }
+
+      resultBox.classList.remove('hidden');
+      state.score = score;
+      state.quizCompleted = true;
+
+      if (score >= 3) {
+        resultBox.className = 'p-5 rounded-2xl border text-sm space-y-2 block bg-emerald-50 border-emerald-300 text-emerald-900';
+        resultBox.innerHTML = `
+          <div class="flex items-center space-x-2 font-bold text-base">
+            <i class="fa-solid fa-circle-check text-emerald-600 text-lg"></i>
+            <span>Parabéns! Você acertou ${score} de 4 questões!</span>
+          </div>
+          <p>Você demonstrou domínio dos conceitos essenciais do Debian. O Módulo 1 está concluído com sucesso e você está pronto para o Módulo 2 (SSH)!</p>
+        `;
+      } else {
+        resultBox.className = 'p-5 rounded-2xl border text-sm space-y-2 block bg-red-50 border-red-300 text-red-900';
+        resultBox.innerHTML = `
+          <div class="flex items-center space-x-2 font-bold text-base">
+            <i class="fa-solid fa-circle-xmark text-red-600 text-lg"></i>
+            <span>Você acertou ${score} de 4 questões.</span>
+          </div>
+          <p>Revise os cards do Dicionário Técnico na Unidade 6 e tente novamente para fixar os conceitos!</p>
+        `;
+      }
+
+      saveState();
+      updateProgress();
+    }
+
+    // YouTube URL Extractor & Updater
+    function extractYoutubeId(urlOrId) {
+      if (!urlOrId) return '';
+      const clean = urlOrId.trim();
+      if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) {
+        return clean;
+      }
+      const shortMatch = clean.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+      if (shortMatch) return shortMatch[1];
+      const match = clean.match(/(?:v=|\/embed\/|\/live\/|\/v\/)([a-zA-Z0-9_-]{11})/);
+      if (match) return match[1];
+      return '';
+    }
+
+    function updateYoutubeVideo() {
+      const input = document.getElementById('customYoutubeInput');
+      if (!input) return;
+      const val = input.value.trim();
+      const videoId = extractYoutubeId(val);
+
+      if (!videoId) {
+        showToast('Link do YouTube inválido. Cole a URL completa ou o ID do vídeo.');
+        return;
+      }
+
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
+      const ytPlayer = document.getElementById('youtubePlayer');
+      if (ytPlayer) ytPlayer.src = embedUrl;
+
+      const directLink = document.getElementById('directYoutubeLink');
+      if (directLink) {
+        directLink.href = `https://www.youtube.com/watch?v=${videoId}`;
+        directLink.innerText = `https://youtu.be/${videoId}`;
+      }
+
+      try {
+        localStorage.setItem('modulo1_youtube_videoid', videoId);
+      } catch (e) {}
+
+      showToast('Vídeo do YouTube atualizado com sucesso!');
+    }
+
+    function loadSavedYoutubeVideo() {
+      try {
+        const saved = localStorage.getItem('modulo1_youtube_videoid');
+        if (saved) {
+          const embedUrl = `https://www.youtube-nocookie.com/embed/${saved}?rel=0`;
+          const ytPlayer = document.getElementById('youtubePlayer');
+          if (ytPlayer) ytPlayer.src = embedUrl;
+          const directLink = document.getElementById('directYoutubeLink');
+          if (directLink) {
+            directLink.href = `https://www.youtube.com/watch?v=${saved}`;
+            directLink.innerText = `https://youtu.be/${saved}`;
+          }
+          const ytInput = document.getElementById('customYoutubeInput');
+          if (ytInput) ytInput.value = `https://youtu.be/${saved}`;
+        }
+      } catch (e) {}
+    }
+
+    // Initialize on load
+    window.onload = function() {
+      loadSavedState();
+      loadSavedYoutubeVideo();
+      updateProgress();
+
+      const termInput = document.getElementById('termInput');
+      if (termInput) {
+        termInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            const val = this.value;
+            if (val.trim() !== '') {
+              runSimCommand(val);
+              this.value = '';
+            }
+          }
+        });
+      }
+    };
+  </script>
+</body>
+</html>
