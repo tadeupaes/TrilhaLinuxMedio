@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Definitivo de Armazenamento: MBR/GPT, Volumes e Prática</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar and animations */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    .data-block {
+      transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.8; }
+    }
+    .glow-effect {
+      animation: pulseGlow 3s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-blue-600 selection:text-white min-h-screen flex flex-col">
+
+  <!-- Header / Navigation Bar -->
+  <header class="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center font-mono font-bold text-white shadow-lg shadow-blue-500/25">
+          DS
+        </div>
+        <div>
+          <span class="font-bold text-lg tracking-tight text-white">Storage<span class="text-blue-500">Mastery</span></span>
+          <span class="hidden sm:inline-block text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded ml-2 border border-slate-700">Guia Prático</span>
+        </div>
+      </div>
+
+      <!-- Quick Nav Links -->
+      <nav class="hidden md:flex items-center space-x-1 text-sm font-medium text-slate-300">
+        <a href="#mbr-gpt" class="px-3 py-1.5 rounded-md hover:text-white hover:bg-slate-800 transition">MBR vs GPT</a>
+        <a href="#volumes" class="px-3 py-1.5 rounded-md hover:text-white hover:bg-slate-800 transition">Volumes</a>
+        <a href="#filesystems" class="px-3 py-1.5 rounded-md hover:text-white hover:bg-slate-800 transition text-emerald-400">Sistemas de Arquivos</a>
+        <a href="#simulator" class="px-3 py-1.5 rounded-md hover:text-white hover:bg-slate-800 transition text-blue-400">Simulador</a>
+        <a href="#pratica-windows" class="px-3 py-1.5 rounded-md hover:text-white hover:bg-slate-800 transition">Windows</a>
+        <a href="#pratica-linux" class="px-3 py-1.5 rounded-md hover:text-white hover:bg-slate-800 transition">Linux</a>
+        <a href="#pratica-mac" class="px-3 py-1.5 rounded-md hover:text-white hover:bg-slate-800 transition">macOS</a>
+        <a href="#decision" class="px-3 py-1.5 rounded-md hover:text-white hover:bg-slate-800 transition">Qual Usar?</a>
+      </nav>
+
+      <div class="flex items-center space-x-2">
+        <a href="#simulator" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition shadow-md shadow-blue-600/30">
+          Simular Gravação
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative overflow-hidden py-16 lg:py-20 border-b border-slate-800/80 bg-gradient-to-b from-slate-900 to-slate-950">
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:3rem_3rem]"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-medium mb-6">
+        <span class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
+        Arquitetura de Discos & Sistemas de Arquivos
+      </div>
+      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white mb-6">
+        Discos <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-400">Simples, Estendidos e Distribuídos</span>
+      </h1>
+      <p class="max-w-3xl mx-auto text-base sm:text-lg text-slate-400 leading-relaxed mb-8">
+        Domine desde a base física das tabelas de partição (<strong>MBR e GPT</strong>), os tipos de <strong>volumes lógicos e dinâmicos</strong>, até os principais <strong>sistemas de arquivos (FAT32, NTFS, EXT4 e APFS)</strong>, com comandos de produção para <strong>Windows, Linux e macOS</strong>.
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <a href="#mbr-gpt" class="bg-slate-800 hover:bg-slate-700 text-white font-medium px-5 py-2.5 rounded-lg border border-slate-700 transition">
+          1. Tabelas de Partição (MBR/GPT)
+        </a>
+        <a href="#volumes" class="bg-slate-800 hover:bg-slate-700 text-white font-medium px-5 py-2.5 rounded-lg border border-slate-700 transition">
+          2. Conceitos de Volumes
+        </a>
+        <a href="#filesystems" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/60 font-medium px-5 py-2.5 rounded-lg transition">
+          3. Sistemas de Arquivos (FAT32/NTFS/EXT4/APFS)
+        </a>
+        <a href="#simulator" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-5 py-2.5 rounded-lg transition">
+          4. Testar no Simulador Interativo
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Notification Toast Component -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-lg shadow-2xl flex items-center space-x-3 translate-y-20 opacity-0 transition duration-300 pointer-events-none">
+    <svg class="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+    <span id="toast-msg" class="text-sm font-medium">Comando copiado para a área de transferência!</span>
+  </div>
+
+  <!-- Main Content Layout -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20 flex-1">
+
+    <!-- SEÇÃO 1: MBR VS GPT -->
+    <section id="mbr-gpt" class="scroll-mt-24 space-y-8">
+      <div class="border-b border-slate-800 pb-4">
+        <span class="text-blue-400 font-mono text-xs uppercase tracking-wider">Capítulo 01</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Tabelas de Particionamento: MBR vs GPT</h2>
+        <p class="text-slate-400 mt-2 text-sm sm:text-base">
+          Antes de criar qualquer volume ou sistema de arquivos, o hardware e o sistema operacional precisam saber onde começam e terminam as divisões de um disco rígido ou SSD.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- MBR Card -->
+        <div class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 sm:p-8 flex flex-col justify-between hover:border-slate-700 transition">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-amber-400 bg-amber-400/10 border border-amber-400/20 text-xs font-mono font-semibold px-2.5 py-1 rounded">Padrão Legado (1983)</span>
+              <span class="text-xs text-slate-500 font-mono">Setor 0 (LBA 0)</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-3">MBR (Master Boot Record)</h3>
+            <p class="text-slate-300 text-sm leading-relaxed mb-6">
+              Introduzido com o IBM PC DOS 2.0, o MBR armazena informações de partição e o código do bootloader no primeiro setor de 512 bytes do disco. Por utilizar campos de 32 bits para endereçamento de setores LBA, possui gargalos físicos intransponíveis na era dos discos modernos.
+            </p>
+            <ul class="space-y-3 text-sm text-slate-300">
+              <li class="flex items-start">
+                <span class="text-rose-400 mr-2 font-bold font-mono">✕</span>
+                <span><strong>Limite de 2.2 TB:</strong> Com setores convencionais de 512 bytes e limite de 32 bits ($2^{32} \times 512 = 2.199.023.255.552$ bytes), qualquer espaço além de 2 TB é inutilizado e não pode ser particionado.</span>
+              </li>
+              <li class="flex items-start">
+                <span class="text-rose-400 mr-2 font-bold font-mono">✕</span>
+                <span><strong>Máximo de 4 Partições Primárias:</strong> Para contornar isso, é necessário converter uma primária em partição "Estendida" e criar partições "Lógicas" dentro dela.</span>
+              </li>
+              <li class="flex items-start">
+                <span class="text-rose-400 mr-2 font-bold font-mono">✕</span>
+                <span><strong>Ponto Único de Falha:</strong> Não há cópia de segurança. Se o setor 0 sofrer corrupção de hardware ou gravação acidental, todas as tabelas de partição são perdidas.</span>
+              </li>
+              <li class="flex items-start">
+                <span class="text-amber-400 mr-2 font-bold font-mono">!</span>
+                <span><strong>Boot:</strong> Projetado para sistemas com <strong>BIOS Legada</strong> (CSM). Não inicializa nativamente sistemas operacionais via UEFI moderno sem módulos de compatibilidade.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-400 font-mono">
+            Indicado apenas para: Pendrives antigos, sistemas legados de 32 bits ou máquinas industriais antigas.
+          </div>
+        </div>
+
+        <!-- GPT Card -->
+        <div class="bg-slate-900/90 rounded-2xl border border-blue-900/40 p-6 sm:p-8 flex flex-col justify-between hover:border-blue-700/60 transition relative overflow-hidden shadow-xl shadow-blue-950/40">
+          <div class="absolute -right-12 -top-12 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 text-xs font-mono font-semibold px-2.5 py-1 rounded">Padrão Atual & Futuro</span>
+              <span class="text-xs text-blue-400 font-mono">LBA 1 a 33 + Cópia Final</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-3">GPT (GUID Partition Table)</h3>
+            <p class="text-slate-300 text-sm leading-relaxed mb-6">
+              Parte integrante da especificação <strong>UEFI</strong>. O GPT utiliza identificadores únicos universais (GUID) para cada partição e endereçamento LBA de 64 bits, eliminando as limitações do MBR e oferecendo alta confiabilidade de dados.
+            </p>
+            <ul class="space-y-3 text-sm text-slate-300">
+              <li class="flex items-start">
+                <span class="text-emerald-400 mr-2 font-bold font-mono">✓</span>
+                <span><strong>Capacidade quase infinita (9.4 Zettabytes):</strong> Endereçamento de 64 bits suporta até $18 \times 10^{18}$ bytes (9,4 ZB), garantindo compatibilidade com armazenamentos industriais por décadas.</span>
+              </li>
+              <li class="flex items-start">
+                <span class="text-emerald-400 mr-2 font-bold font-mono">✓</span>
+                <span><strong>Até 128 partições no Windows:</strong> Suporte nativo a dezenas de partições sem qualquer necessidade de partições estendidas ou lógicas complexas.</span>
+              </li>
+              <li class="flex items-start">
+                <span class="text-emerald-400 mr-2 font-bold font-mono">✓</span>
+                <span><strong>Redundância e Verificação CRC32:</strong> Mantém uma cópia de cabeçalho e tabela no final físico do disco. Possui checksums CRC32; se o setor for corrompido, o firmware recupera a tabela automaticamente.</span>
+              </li>
+              <li class="flex items-start">
+                <span class="text-emerald-400 mr-2 font-bold font-mono">✓</span>
+                <span><strong>Protective MBR:</strong> Grava um MBR de proteção no LBA 0 para impedir que utilitários antigos destruam a tabela GPT por engano.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="mt-6 pt-4 border-t border-slate-800 text-xs text-emerald-400 font-mono">
+            Obrigatório para: Windows 11, Secure Boot, drives NVMe modernos e discos acima de 2 TB.
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela Comparativa Detalhada -->
+      <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/60">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-950 text-slate-400 font-mono text-xs uppercase border-b border-slate-800">
+            <tr>
+              <th scope="col" class="py-3.5 px-6">Característica</th>
+              <th scope="col" class="py-3.5 px-6">MBR (Master Boot Record)</th>
+              <th scope="col" class="py-3.5 px-6 text-blue-400">GPT (GUID Partition Table)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/80 font-normal">
+            <tr class="hover:bg-slate-800/40">
+              <td class="py-3 px-6 font-medium text-white">Capacidade Máxima Suportada</td>
+              <td class="py-3 px-6 text-rose-300">2.2 Terabytes (TB)</td>
+              <td class="py-3 px-6 text-emerald-400 font-semibold">9.4 Zettabytes (ZB) ($9.4 \times 10^9$ TB)</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40">
+              <td class="py-3 px-6 font-medium text-white">Número Máximo de Partições</td>
+              <td class="py-3 px-6">4 Primárias (ou 3 Primárias + 1 Estendida)</td>
+              <td class="py-3 px-6 text-emerald-400">Até 128 no Windows (Ilimitado na teoria)</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40">
+              <td class="py-3 px-6 font-medium text-white">Tipo de Firmware / Boot</td>
+              <td class="py-3 px-6">BIOS Legada (Legacy) / Modo CSM</td>
+              <td class="py-3 px-6 text-blue-400">UEFI (Unified Extensible Firmware Interface)</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40">
+              <td class="py-3 px-6 font-medium text-white">Mecanismo de Resiliência</td>
+              <td class="py-3 px-6 text-slate-400">Nenhum (Setor 0 danificado = perda total)</td>
+              <td class="py-3 px-6 text-emerald-400">Checksum CRC32 + Cópia secundária de backup no fim do disco</td>
+            </tr>
+            <tr class="hover:bg-slate-800/40">
+              <td class="py-3 px-6 font-medium text-white">Identificação das Partições</td>
+              <td class="py-3 px-6">Códigos Hexadecimais simples (ex: 0x07 NTFS)</td>
+              <td class="py-3 px-6 font-mono text-xs">GUIDs de 128-bit globais exclusivos</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 2: VOLUMES SIMPLES, ESTENDIDOS E DISTRIBUÍDOS -->
+    <section id="volumes" class="scroll-mt-24 space-y-8">
+      <div class="border-b border-slate-800 pb-4">
+        <span class="text-blue-400 font-mono text-xs uppercase tracking-wider">Capítulo 02</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Volumes: Simples, Estendido e Distribuído</h2>
+        <p class="text-slate-400 mt-2 text-sm sm:text-base">
+          Como os dados são organizados e distribuídos nas unidades de armazenamento físicas.
+        </p>
+      </div>
+
+      <!-- Cards dos 3 Volumes -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Volume Simples -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between hover:border-slate-700 transition">
+          <div>
+            <div class="h-10 w-10 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-lg mb-4">
+              01
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Volume Simples</h3>
+            <span class="inline-block text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono mb-4">1 Disco Físico Apenas</span>
+            <p class="text-slate-300 text-sm leading-relaxed mb-4">
+              É a unidade padrão de armazenamento. Utiliza espaço livre contíguo de <strong>um único disco físico</strong>. Em discos dinâmicos, pode ser expandido dentro do próprio disco caso haja espaço contíguo ou não alocado adjacente.
+            </p>
+            <div class="space-y-2 text-xs text-slate-300 mb-6">
+              <div class="p-2.5 rounded bg-slate-950/80 border border-slate-800/80">
+                <span class="font-semibold text-white block mb-1">Como grava:</span>
+                Grave sequencialmente em blocos no próprio drive de origem.
+              </div>
+              <div class="p-2.5 rounded bg-slate-950/80 border border-slate-800/80">
+                <span class="font-semibold text-rose-400 block mb-1">Tolerância a Falhas:</span>
+                Nenhuma nativa. Se o disco queimar, o volume é perdido.
+              </div>
+            </div>
+          </div>
+          <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-400">
+            <strong>Uso recomendado:</strong> Partição do Sistema Operacional (`C:`), discos secundários normais, armazenamento de arquivos individuais.
+          </div>
+        </div>
+
+        <!-- Volume Estendido -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between hover:border-slate-700 transition">
+          <div>
+            <div class="h-10 w-10 rounded-lg bg-amber-600/20 text-amber-400 flex items-center justify-center font-bold text-lg mb-4">
+              02
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Volume Estendido</h3>
+            <span class="inline-block text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono mb-4">2 a 32 Discos Físicos (JBOD)</span>
+            <p class="text-slate-300 text-sm leading-relaxed mb-4">
+              Conhecido também pelo conceito de <strong>Spanned Volume</strong> ou <strong>JBOD</strong> (Just a Bunch of Disks). Combina sobras de espaço de diferentes discos (podendo ter tamanhos e marcas completamente diferentes) em uma única letra de unidade lógica.
+            </p>
+            <div class="space-y-2 text-xs text-slate-300 mb-6">
+              <div class="p-2.5 rounded bg-slate-950/80 border border-slate-800/80">
+                <span class="font-semibold text-white block mb-1">Como grava (Linear):</span>
+                Preenche completamente o Disco 1 primeiro. Somente quando o Disco 1 atinge 100%, ele começa a gravar no Disco 2.
+              </div>
+              <div class="p-2.5 rounded bg-slate-950/80 border border-slate-800/80">
+                <span class="font-semibold text-rose-400 block mb-1">Tolerância a Falhas:</span>
+                <strong>Zero</strong>. Se qualquer um dos discos falhar, a tabela do sistema de arquivos é destruída e o volume inteiro torna-se inacessível.
+              </div>
+            </div>
+          </div>
+          <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-400">
+            <strong>Uso recomendado:</strong> Aproveitar sobras de HDs velhos (ex: juntar 250 GB + 500 GB = 750 GB) para arquivos temporários sem valor crítico.
+          </div>
+        </div>
+
+        <!-- Volume Distribuído -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col justify-between hover:border-slate-700 transition">
+          <div>
+            <div class="h-10 w-10 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold text-lg mb-4">
+              03
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Volume Distribuído</h3>
+            <span class="inline-block text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono mb-4">2 a 32 Discos (RAID 0)</span>
+            <p class="text-slate-300 text-sm leading-relaxed mb-4">
+              Tecnicamente chamado de <strong>Striped Volume</strong> ou <strong>RAID 0</strong>. Requer áreas de tamanho idêntico em cada disco participante. O foco principal não é a economia de sobras, mas sim a <strong>velocidade extrema</strong>.
+            </p>
+            <div class="space-y-2 text-xs text-slate-300 mb-6">
+              <div class="p-2.5 rounded bg-slate-950/80 border border-slate-800/80">
+                <span class="font-semibold text-white block mb-1">Como grava (Striping Paralelo):</span>
+                Os dados são fatiados em blocos (stripes, ex: 64 KB). Bloco 1 vai para o Disco A, Bloco 2 para o Disco B simultaneamente.
+              </div>
+              <div class="p-2.5 rounded bg-slate-950/80 border border-slate-800/80">
+                <span class="font-semibold text-rose-400 block mb-1">Tolerância a Falhas:</span>
+                <strong>Risco Dobrado</strong> ($1 - (1-p)^n$). Se 1 disco queimar, 50% dos pedaços de cada arquivo desaparecem; perda imediata total.
+              </div>
+            </div>
+          </div>
+          <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-400">
+            <strong>Uso recomendado:</strong> Cache de edição de vídeo, renderização 3D, pastas temporárias de computação que já possuam backup externo.
+          </div>
+        </div>
+      </div>
+
+      <!-- Nota Técnica: Discos Básicos vs Dinâmicos e Storage Spaces -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-6">
+        <h4 class="text-white font-semibold flex items-center gap-2 mb-2">
+          <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          Importante: Discos Básicos vs Dinâmicos & Storage Spaces (Windows)
+        </h4>
+        <div class="text-sm text-slate-300 space-y-2 leading-relaxed">
+          <p>
+            No Windows, volumes Estendidos e Distribuídos exigem a conversão do disco de <strong>Básico</strong> para <strong>Dinâmico</strong> (que utiliza o LDM - <em>Logical Disk Manager</em>).
+          </p>
+          <p>
+            ⚠️ <strong>Depreciação Atual:</strong> A Microsoft declarou o recurso de Discos Dinâmicos como <strong>obsoleto (deprecated)</strong> em versões recentes do Windows 10/11 e Windows Server. O substituto oficial e moderno da Microsoft chama-se <strong>Espaços de Armazenamento (Storage Spaces)</strong>, que oferece pool de discos, camadas de paridade e melhor tolerância a falhas sem as travas do formato LDM. No entanto, o `diskpart` e a GUI ainda oferecem suporte aos volumes dinâmicos por retrocompatibilidade.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO NOVA: SISTEMAS DE ARQUIVOS (FAT32, NTFS, EXT4, APFS) -->
+    <section id="filesystems" class="scroll-mt-24 space-y-8">
+      <div class="border-b border-slate-800 pb-4">
+        <span class="text-emerald-400 font-mono text-xs uppercase tracking-wider">Capítulo 03</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Sistemas de Arquivos: FAT32, NTFS, EXT4 e APFS</h2>
+        <p class="text-slate-400 mt-2 text-sm sm:text-base">
+          A partição define os limites físicos no disco, enquanto o <strong>Sistema de Arquivos</strong> determina a estrutura lógica onde dados, diretórios, permissões, metadados e registros de transações (journaling) são guardados.
+        </p>
+      </div>
+
+      <!-- Grid com os 4 Principais Sistemas de Arquivos -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        <!-- FAT32 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-amber-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-amber-400 bg-amber-400/10 border border-amber-400/20 text-[11px] font-mono px-2 py-0.5 rounded font-semibold">Universal / Legado</span>
+              <span class="text-xs text-slate-500 font-mono">1996 (Win 95 OSR2)</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">FAT32</h3>
+            <p class="text-xs text-slate-400 font-mono mb-4">File Allocation Table 32-bit</p>
+            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+              O padrão com maior compatibilidade global da história da computação. Qualquer Smart TV, console de videogame, rádio de carro, roteador, Windows, macOS ou Linux lê e grava em FAT32 sem drivers adicionais.
+            </p>
+            <div class="space-y-2 text-xs text-slate-300 border-t border-slate-800/80 pt-4 mb-4">
+              <div><strong class="text-rose-400 font-mono">✕ Tamanho Máx. de Arquivo:</strong> 4 GB (limite estrito de 32 bits no cabeçalho).</div>
+              <div><strong class="text-amber-400 font-mono">✕ Tamanho Máx. Volume:</strong> 2 TB (Windows limita a 32 GB pelo utilitário padrão).</div>
+              <div><strong class="text-rose-400 font-mono">✕ Sem Journaling:</strong> Puxar o pendrive sem ejetar corrompe facilmente os arquivos.</div>
+              <div><strong class="text-slate-400 font-mono">✕ Sem Permissões:</strong> Não suporta ACLs nem permissões POSIX.</div>
+            </div>
+          </div>
+          <div class="text-[11px] text-amber-300 font-mono bg-amber-950/40 border border-amber-800/40 p-2.5 rounded-lg">
+            Ideal para: Pendrives de boot BIOS, firmwares de roteadores e compatibilidade com videogames retrô.
+          </div>
+        </div>
+
+        <!-- NTFS -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-blue-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-blue-400 bg-blue-400/10 border border-blue-400/20 text-[11px] font-mono px-2 py-0.5 rounded font-semibold">Padrão Windows</span>
+              <span class="text-xs text-slate-500 font-mono">1993 (Windows NT)</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">NTFS</h3>
+            <p class="text-xs text-slate-400 font-mono mb-4">New Technology File System</p>
+            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+              Sistema de arquivos profissional desenvolvido pela Microsoft. Baseado na MFT (Master File Table), possui registro em diário (*journaling* com arquivo `$LogFile`), garantindo integridade contra falhas de energia e desligamentos bruscos.
+            </p>
+            <div class="space-y-2 text-xs text-slate-300 border-t border-slate-800/80 pt-4 mb-4">
+              <div><strong class="text-emerald-400 font-mono">✓ Recursos Corporativos:</strong> ACLs (permissões de usuário granular), cotas de disco e Shadow Copies (VSS).</div>
+              <div><strong class="text-emerald-400 font-mono">✓ Criptografia & Compressão:</strong> Suporte nativo a EFS (*Encrypting File System*) e compressão transparente.</div>
+              <div><strong class="text-emerald-400 font-mono">✓ Limite Gigante:</strong> Arquivos e partições de até 8 PB.</div>
+              <div><strong class="text-amber-400 font-mono">! Compatibilidade Mac:</strong> O macOS apenas lê NTFS nativamente (escrita exige software de terceiros ou FUSE).</div>
+            </div>
+          </div>
+          <div class="text-[11px] text-blue-300 font-mono bg-blue-950/40 border border-blue-800/40 p-2.5 rounded-lg">
+            Ideal para: Instalação do Windows (`C:`), discos internos de PCs e servidores corporativos Microsoft.
+          </div>
+        </div>
+
+        <!-- EXT4 -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-emerald-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 text-[11px] font-mono px-2 py-0.5 rounded font-semibold">Padrão GNU/Linux</span>
+              <span class="text-xs text-slate-500 font-mono">2008 (Kernel Linux)</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">EXT4</h3>
+            <p class="text-xs text-slate-400 font-mono mb-4">Fourth Extended Filesystem</p>
+            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+              O sistema de arquivos de referência da grande maioria das distribuições Linux e Android. Utiliza estrutura de **Inodes** (tabelas de descritores de metadados separadas do conteúdo do arquivo), alocação com *extents* e gravação diferida (*delayed allocation*).
+            </p>
+            <div class="space-y-2 text-xs text-slate-300 border-t border-slate-800/80 pt-4 mb-4">
+              <div><strong class="text-emerald-400 font-mono">✓ Alta Estabilidade:</strong> Journaling maduro com suporte a 3 modos (`ordered`, `journal` ou `writeback`).</div>
+              <div><strong class="text-emerald-400 font-mono">✓ Permissões POSIX:</strong> Permissões Unix puras (owner/group/others, SUID, SGID, Sticky bit e ACLs).</div>
+              <div><strong class="text-emerald-400 font-mono">✓ Limites:</strong> Arquivos até 16 TB e volumes até 1 Exabyte (EB).</div>
+              <div><strong class="text-amber-400 font-mono">! Windows/Mac:</strong> Não lê nativamente sem softwares auxiliares como WSL2 ou Paragon.</div>
+            </div>
+          </div>
+          <div class="text-[11px] text-emerald-300 font-mono bg-emerald-950/40 border border-emerald-800/40 p-2.5 rounded-lg">
+            Ideal para: Servidores Linux, contêineres Docker, estações de trabalho e discos raiz de distribuições.
+          </div>
+        </div>
+
+        <!-- APFS -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-purple-500/40 transition">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-purple-400 bg-purple-400/10 border border-purple-400/20 text-[11px] font-mono px-2 py-0.5 rounded font-semibold">Padrão Apple</span>
+              <span class="text-xs text-slate-500 font-mono">2017 (macOS High Sierra)</span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">APFS</h3>
+            <p class="text-xs text-slate-400 font-mono mb-4">Apple File System (Substituiu HFS+)</p>
+            <p class="text-sm text-slate-300 leading-relaxed mb-4">
+              Criado especificamente para memórias Flash e drives SSDs da Apple. Revolucionou o ecossistema com arquitetura de <strong>Copy-on-Write (CoW)</strong>, clonagem instantânea de arquivos sem consumir espaço em disco e suporte a snapshots nativos integrados ao Time Machine.
+            </p>
+            <div class="space-y-2 text-xs text-slate-300 border-t border-slate-800/80 pt-4 mb-4">
+              <div><strong class="text-emerald-400 font-mono">✓ Clones Instantâneos:</strong> Duplicar um arquivo de 50 GB leva milissegundos e ocupa 0 bytes extras até ser modificado.</div>
+              <div><strong class="text-emerald-400 font-mono">✓ Criptografia Nativa:</strong> Suporte multi-chave integrado ao hardware do chip Apple Silicon (T2, M1, M2, M3, M4).</div>
+              <div><strong class="text-emerald-400 font-mono">✓ Space Sharing:</strong> Múltiplos volumes compartilham o mesmo pool de armazenamento dinâmico.</div>
+              <div><strong class="text-rose-400 font-mono">✕ Exclusividade Apple:</strong> Incompatível nativamente com Windows e Linux.</div>
+            </div>
+          </div>
+          <div class="text-[11px] text-purple-300 font-mono bg-purple-950/40 border border-purple-800/40 p-2.5 rounded-lg">
+            Ideal para: Macs modernos (MacBook, Mac mini, Mac Studio), iPhones, iPads e SSDs externos exclusivos Apple.
+          </div>
+        </div>
+      </div>
+
+      <!-- Menção Honrosa a Sistemas Avançados: exFAT, Btrfs e ZFS -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5">
+          <span class="font-bold text-white flex items-center gap-1.5 font-mono">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> exFAT (Ponte Universal)
+          </span>
+          <p class="text-slate-400">
+            Criado pela Microsoft para substituir o FAT32 em pendrives e cartões SD. Suporta arquivos maiores que 4 GB e funciona nativamente com permissão total de <strong>leitura e gravação no Windows, macOS e Linux moderno</strong>.
+          </p>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5">
+          <span class="font-bold text-white flex items-center gap-1.5 font-mono">
+            <span class="w-2 h-2 rounded-full bg-indigo-400"></span> Btrfs / XFS (Linux Next-Gen)
+          </span>
+          <p class="text-slate-400">
+            <strong>Btrfs:</strong> Foco em Copy-on-Write, subvolumes e snapshots (padrão no Fedora e openSUSE). <strong>XFS:</strong> Foco em altíssimo paralelismo para arquivos gigantescos e bancos de dados (padrão no RHEL/CentOS).
+          </p>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl text-xs space-y-1.5">
+          <span class="font-bold text-white flex items-center gap-1.5 font-mono">
+            <span class="w-2 h-2 rounded-full bg-orange-400"></span> ZFS (OpenZFS)
+          </span>
+          <p class="text-slate-400">
+            Considerado o ápice da integridade de dados para servidores NAS corporativos (TrueNAS). Combina gerenciador de volumes, RAID por software e checagem contínua contra corrupção silenciosa de bits (*bit rot*).
+          </p>
+        </div>
+      </div>
+
+      <!-- Matriz Comparativa de Sistemas de Arquivos -->
+      <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/60">
+        <div class="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+          <span class="text-xs font-mono font-bold text-white uppercase tracking-wider">Matriz Técnica & Interoperabilidade entre SOs</span>
+          <span class="text-xs text-slate-400 font-mono">Windows • Linux • macOS</span>
+        </div>
+        <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+          <thead class="bg-slate-950 text-slate-400 font-mono text-xs uppercase border-b border-slate-800">
+            <tr>
+              <th scope="col" class="py-3 px-4">Sistema</th>
+              <th scope="col" class="py-3 px-4">Tamanho Máx. Arquivo</th>
+              <th scope="col" class="py-3 px-4">Tamanho Máx. Volume</th>
+              <th scope="col" class="py-3 px-4">Journaling</th>
+              <th scope="col" class="py-3 px-4 text-blue-400">Windows</th>
+              <th scope="col" class="py-3 px-4 text-emerald-400">Linux</th>
+              <th scope="col" class="py-3 px-4 text-purple-400">macOS</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/70 font-normal">
+            <tr class="hover:bg-slate-800/30">
+              <td class="py-3 px-4 font-mono font-bold text-white">FAT32</td>
+              <td class="py-3 px-4 text-rose-400 font-mono">4 GB</td>
+              <td class="py-3 px-4 text-slate-300">2 TB (32 GB no utilitário Win)</td>
+              <td class="py-3 px-4 text-rose-400">Não</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Leitura + Escrita</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Leitura + Escrita</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Leitura + Escrita</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30">
+              <td class="py-3 px-4 font-mono font-bold text-white">exFAT</td>
+              <td class="py-3 px-4 text-emerald-400 font-mono">16 Exabytes</td>
+              <td class="py-3 px-4 text-emerald-400">128 Petabytes</td>
+              <td class="py-3 px-4 text-rose-400">Não</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Leitura + Escrita</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Leitura + Escrita (Kernel 5.7+)</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Leitura + Escrita</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30">
+              <td class="py-3 px-4 font-mono font-bold text-white">NTFS</td>
+              <td class="py-3 px-4 text-emerald-400 font-mono">8 PB</td>
+              <td class="py-3 px-4 text-emerald-400">8 PB</td>
+              <td class="py-3 px-4 text-emerald-400">Sim</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Nativo (Leitura + Escrita)</td>
+              <td class="py-3 px-4 text-emerald-400">Leitura + Escrita (ntfs3 / ntfs-3g)</td>
+              <td class="py-3 px-4 text-amber-400">Apenas Leitura (Nativo)</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30">
+              <td class="py-3 px-4 font-mono font-bold text-white">EXT4</td>
+              <td class="py-3 px-4 text-emerald-400 font-mono">16 TB</td>
+              <td class="py-3 px-4 text-emerald-400">1 Exabyte</td>
+              <td class="py-3 px-4 text-emerald-400">Sim</td>
+              <td class="py-3 px-4 text-rose-400">Não (Via WSL2 apenas)</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Nativo (Leitura + Escrita)</td>
+              <td class="py-3 px-4 text-rose-400">Não (Exige drivers extFS)</td>
+            </tr>
+            <tr class="hover:bg-slate-800/30">
+              <td class="py-3 px-4 font-mono font-bold text-white">APFS</td>
+              <td class="py-3 px-4 text-emerald-400 font-mono">8 Exabytes</td>
+              <td class="py-3 px-4 text-emerald-400">8 Exabytes</td>
+              <td class="py-3 px-4 text-emerald-400">CoW (Copy-on-Write)</td>
+              <td class="py-3 px-4 text-rose-400">Não (Exige driver pago)</td>
+              <td class="py-3 px-4 text-amber-400">Leitura parcial (apfs-fuse experimental)</td>
+              <td class="py-3 px-4 text-emerald-400 font-semibold">Nativo (Leitura + Escrita)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 3: SIMULADOR VISUAL DE GRAVAÇÃO -->
+    <section id="simulator" class="scroll-mt-24 space-y-6">
+      <div class="border-b border-slate-800 pb-4">
+        <span class="text-blue-400 font-mono text-xs uppercase tracking-wider">Laboratório Interativo</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Simulador de Gravação em Tempo Real</h2>
+        <p class="text-slate-400 mt-2 text-sm sm:text-base">
+          Selecione o tipo de volume e envie blocos de arquivos para ver visualmente como os dados são posicionados nos discos físicos.
+        </p>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8">
+        <!-- Controles do Simulador -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-slate-800">
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <span class="text-xs text-slate-400 font-mono mr-2">Modo:</span>
+            <button onclick="setSimMode('simple')" id="btn-mode-simple" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition">
+              Simples (1 Disco)
+            </button>
+            <button onclick="setSimMode('spanned')" id="btn-mode-spanned" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+              Estendido (Linear / Spanned)
+            </button>
+            <button onclick="setSimMode('striped')" id="btn-mode-striped" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+              Distribuído (Striped / RAID 0)
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button onclick="simulateWrite()" id="btn-write" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              Gravar Arquivo (4 Blocos)
+            </button>
+            <button onclick="resetSimulation()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-lg text-xs font-semibold transition">
+              Limpar Discos
+            </button>
+          </div>
+        </div>
+
+        <!-- Descrição do Comportamento Atual -->
+        <div class="mt-4 p-3 rounded-lg bg-slate-950/70 border border-slate-800 text-xs font-mono text-slate-300 flex items-center justify-between">
+          <span id="sim-status-text">Modo: Volume Simples. Os dados são gravados exclusivamente no Disco 1.</span>
+          <span id="sim-speed-text" class="text-blue-400 font-semibold">Velocidade: 1x (Standard)</span>
+        </div>
+
+        <!-- Representação dos Discos Físicos -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <!-- Disco 01 -->
+          <div class="bg-slate-950 p-5 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-white text-sm">Disco Físico 0</span>
+                <span class="text-xs text-slate-400 font-mono">(500 GB)</span>
+              </div>
+              <span id="disk0-counter" class="text-xs font-mono text-slate-400">0 / 8 blocos</span>
+            </div>
+            <!-- Slots de Blocos -->
+            <div id="disk0-slots" class="grid grid-cols-4 gap-2">
+              <!-- 8 slots gerados dinamicamente via JS -->
+            </div>
+          </div>
+
+          <!-- Disco 02 -->
+          <div id="disk1-container" class="bg-slate-950 p-5 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span id="disk1-indicator" class="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
+                <span class="font-bold text-white text-sm">Disco Físico 1</span>
+                <span class="text-xs text-slate-400 font-mono">(500 GB)</span>
+              </div>
+              <span id="disk1-counter" class="text-xs font-mono text-slate-400">Inativo no modo Simples</span>
+            </div>
+            <!-- Slots de Blocos -->
+            <div id="disk1-slots" class="grid grid-cols-4 gap-2">
+              <!-- 8 slots gerados dinamicamente via JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Log de Eventos do Simulador -->
+        <div class="mt-4">
+          <div class="text-xs font-mono text-slate-400 uppercase tracking-wider mb-2">Log de E/S (Input/Output)</div>
+          <div id="sim-log" class="h-28 overflow-y-auto bg-slate-950 border border-slate-800 p-3 rounded-lg text-xs font-mono text-slate-400 space-y-1">
+            <div>[Pronto] Simulador inicializado. Escolha o tipo de volume e clique em "Gravar Arquivo".</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 4: PRÁTICA WINDOWS -->
+    <section id="pratica-windows" class="scroll-mt-24 space-y-8">
+      <div class="border-b border-slate-800 pb-4">
+        <span class="text-blue-400 font-mono text-xs uppercase tracking-wider">Passo a Passo Prático</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Implementando no Microsoft Windows</h2>
+        <p class="text-slate-400 mt-2 text-sm sm:text-base">
+          Como particionar e configurar MBR, GPT e os diferentes volumes utilizando a interface gráfica (`diskmgmt.msc`) e o utilitário nativo de terminal `diskpart`.
+        </p>
+      </div>
+
+      <!-- Abas GUI vs Diskpart -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="flex border-b border-slate-800 bg-slate-950 px-4 pt-3 gap-2">
+          <button onclick="switchTab('win', 'cli')" id="tab-btn-win-cli" class="px-4 py-2 text-xs font-mono font-semibold rounded-t-lg bg-slate-900 text-blue-400 border-t-2 border-blue-500 transition">
+            Terminal Diskpart (Recomendado / Profissional)
+          </button>
+          <button onclick="switchTab('win', 'gui')" id="tab-btn-win-gui" class="px-4 py-2 text-xs font-mono font-semibold rounded-t-lg text-slate-400 hover:text-white transition">
+            Interface Gráfica (diskmgmt.msc)
+          </button>
+        </div>
+
+        <!-- Conteúdo CLI (Diskpart) -->
+        <div id="tab-content-win-cli" class="p-6 space-y-6">
+
+          <!-- 1. Inicializar em GPT ou MBR -->
+          <div class="space-y-3">
+            <h4 class="text-base font-semibold text-white flex items-center gap-2">
+              <span class="w-6 h-6 rounded bg-blue-600/20 text-blue-400 flex items-center justify-center text-xs font-mono">1</span>
+              Inicializar Disco Físico e Definir Tabela (MBR ou GPT)
+            </h4>
+            <div class="relative group">
+              <button onclick="copySnippet('code-win-init')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+              <pre id="code-win-init" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code># Abra o PowerShell ou CMD como Administrador e execute:
+diskpart
+
+# Liste os discos conectados para identificar o número correto
+list disk
+
+# Selecione o disco de destino (ATENÇÃO: confirme o número para não apagar o sistema!)
+select disk 1
+
+# Limpa todas as informações e partições antigas existentes
+clean
+
+# CONVERTER PARA GPT (Recomendado para UEFI e discos > 2TB)
+convert gpt
+
+# OU CONVERTER PARA MBR (Apenas se for BIOS legada / compatibilidade)
+# convert mbr</code></pre>
+            </div>
+          </div>
+
+          <!-- 2. Criar Volume Simples -->
+          <div class="space-y-3">
+            <h4 class="text-base font-semibold text-white flex items-center gap-2">
+              <span class="w-6 h-6 rounded bg-blue-600/20 text-blue-400 flex items-center justify-center text-xs font-mono">2</span>
+              Criar Volume Simples (Partição Básica Normal)
+            </h4>
+            <div class="relative group">
+              <button onclick="copySnippet('code-win-simple')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+              <pre id="code-win-simple" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code># Selecionar o disco inicializado
+select disk 1
+
+# Cria uma partição primária usando todo o espaço livre
+create partition primary
+
+# Formata o volume em NTFS rapidamente e com rótulo
+format fs=ntfs quick label="Dados_Simples"
+
+# Atribui uma letra de unidade automática (ex: E:)
+assign
+
+# Sair do utilitário
+exit</code></pre>
+            </div>
+          </div>
+
+          <!-- 3. Criar Volume Estendido (Spanned) -->
+          <div class="space-y-3">
+            <h4 class="text-base font-semibold text-white flex items-center gap-2">
+              <span class="w-6 h-6 rounded bg-amber-600/20 text-amber-400 flex items-center justify-center text-xs font-mono">3</span>
+              Criar Volume Estendido (Spanned - Junta 2 ou mais discos)
+            </h4>
+            <p class="text-xs text-slate-400">Exige conversão prévia dos discos envolvidos para discos dinâmicos.</p>
+            <div class="relative group">
+              <button onclick="copySnippet('code-win-spanned')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+              <pre id="code-win-spanned" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code>diskpart
+
+# Converter ambos os discos para dinâmicos
+select disk 1
+clean
+convert dynamic
+
+select disk 2
+clean
+convert dynamic
+
+# Cria o volume estendido combinando os discos 1 e 2
+# disk=1,2 pega todo o espaço livre restante de ambos e soma em um só
+create volume span disk=1,2
+
+# Formatar e atribuir letra
+format fs=ntfs quick label="Volume_Estendido"
+assign letter=S
+exit</code></pre>
+            </div>
+          </div>
+
+          <!-- 4. Criar Volume Distribuído (Striped / RAID 0) -->
+          <div class="space-y-3">
+            <h4 class="text-base font-semibold text-white flex items-center gap-2">
+              <span class="w-6 h-6 rounded bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-xs font-mono">4</span>
+              Criar Volume Distribuído (Striped / RAID 0 de Alto Desempenho)
+            </h4>
+            <div class="relative group">
+              <button onclick="copySnippet('code-win-striped')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+              <pre id="code-win-striped" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code>diskpart
+
+# Certifique-se de que os discos estão limpos e são dinâmicos
+select disk 1
+clean
+convert dynamic
+
+select disk 2
+clean
+convert dynamic
+
+# Cria o volume distribuído em faixas idênticas entre disk 1 e disk 2
+create volume stripe disk=1,2
+
+# Formatação e montagem
+format fs=ntfs quick label="Stripe_RAID0"
+assign letter=R
+exit</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conteúdo GUI (diskmgmt) -->
+        <div id="tab-content-win-gui" class="p-6 space-y-6 hidden">
+          <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+            <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <span class="text-blue-400 font-bold block">Como abrir:</span>
+              <p>Pressione as teclas <kbd class="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs font-mono text-white">Win + R</kbd>, digite <code class="text-amber-300 font-mono">diskmgmt.msc</code> e pressione Enter.</p>
+            </div>
+
+            <ol class="list-decimal list-inside space-y-4">
+              <li class="p-4 rounded-lg bg-slate-950/60 border border-slate-800">
+                <strong class="text-white">Inicializar o Disco em GPT:</strong>
+                Ao abrir o utilitário com um novo drive, uma janela pop-up surgirá perguntando: <em>"Você deve inicializar um disco antes que o Gerenciamento de Disco Lógico possa acessá-lo"</em>. Escolha o botão de opção <strong>GPT (GUID Partition Table)</strong> e confirme com OK.
+              </li>
+              <li class="p-4 rounded-lg bg-slate-950/60 border border-slate-800">
+                <strong class="text-white">Criar Volume Simples:</strong>
+                Clique com o botão direito sobre o espaço "Não Alocado" em preto do disco $\rightarrow$ selecione <strong>Novo Volume Simples</strong> $\rightarrow$ defina o tamanho $\rightarrow$ escolha a letra de montagem e o sistema de arquivos (NTFS).
+              </li>
+              <li class="p-4 rounded-lg bg-slate-950/60 border border-slate-800">
+                <strong class="text-white">Criar Volume Estendido (Spanned):</strong>
+                Clique com o botão direito no espaço livre do primeiro disco $\rightarrow$ <strong>Novo Volume Estendido</strong> $\rightarrow$ no assistente, selecione os outros discos disponíveis na coluna da esquerda e clique no botão <strong>"Adicionar"</strong> $\rightarrow$ defina o espaço de cada um $\rightarrow$ confirme. O Windows avisará que converterá os discos para dinâmicos.
+              </li>
+              <li class="p-4 rounded-lg bg-slate-950/60 border border-slate-800">
+                <strong class="text-white">Criar Volume Distribuído (Striped / RAID 0):</strong>
+                Clique com o botão direito no espaço não alocado $\rightarrow$ selecione <strong>Novo Volume Distribuído</strong> $\rightarrow$ adicione o segundo disco. Observe que o assistente selecionará automaticamente a mesma quantidade de megabytes em ambos os discos.
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 5: PRÁTICA LINUX -->
+    <section id="pratica-linux" class="scroll-mt-24 space-y-8">
+      <div class="border-b border-slate-800 pb-4">
+        <span class="text-blue-400 font-mono text-xs uppercase tracking-wider">Passo a Passo Prático</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Implementando no GNU/Linux</h2>
+        <p class="text-slate-400 mt-2 text-sm sm:text-base">
+          No ecossistema Linux, o particionamento base é feito via ferramentas como <code>fdisk</code>, <code>gdisk</code> ou <code>parted</code>. Volumes estendidos são tradicionalmente gerenciados pelo <strong>LVM</strong> (Logical Volume Manager) e volumes distribuídos via <strong>mdadm</strong> (Software RAID).
+        </p>
+      </div>
+
+      <div class="space-y-6">
+
+        <!-- 1. Particionamento GPT com gdisk/fdisk -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="w-7 h-7 rounded bg-blue-600/20 text-blue-400 flex items-center justify-center text-xs font-mono">1</span>
+              Particionamento GPT via Terminal (fdisk / parted)
+            </h3>
+            <span class="text-xs font-mono text-slate-400">Base</span>
+          </div>
+          <p class="text-sm text-slate-300 mb-4">
+            Em distribuições modernas (Ubuntu, Debian, RedHat, Arch), o próprio utilitário <code>fdisk</code> suporta GPT nativamente, ou pode-se usar o <code>parted</code> para scripts rápidos.
+          </p>
+
+          <div class="relative group">
+            <button onclick="copySnippet('code-linux-part')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+            <pre id="code-linux-part" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code># 1. Identificar os discos conectados
+lsblk -f
+
+# 2. Criar uma nova tabela de partição GPT no disco /dev/sdb via parted (não-interativo)
+sudo parted /dev/sdb --script mklabel gpt
+
+# 3. Criar uma partição primária ocupando 100% do disco
+sudo parted /dev/sdb --script mkpart primary ext4 0% 100%
+
+# 4. Formatar em EXT4 e criar ponto de montagem
+sudo mkfs.ext4 -L "MeusDados" /dev/sdb1
+sudo mkdir -p /mnt/dados
+sudo mount /dev/sdb1 /mnt/dados
+
+# 5. Adicionar ao /etc/fstab para montagem persistente no boot:
+# Obtenha o UUID da partição:
+sudo blkid /dev/sdb1
+# Adicione a linha no fstab:
+# UUID=xxxx-xxxx /mnt/dados ext4 defaults 0 2</code></pre>
+          </div>
+        </div>
+
+        <!-- 2. Volume Estendido via LVM -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="w-7 h-7 rounded bg-amber-600/20 text-amber-400 flex items-center justify-center text-xs font-mono">2</span>
+              Volume Estendido (Spanned) usando LVM (Logical Volume Manager)
+            </h3>
+            <span class="text-xs font-mono text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded">Equivalente Flexível</span>
+          </div>
+          <p class="text-sm text-slate-300 mb-4">
+            O LVM é o padrão industrial no Linux para unir múltiplos discos físicos (Physical Volumes - PV) em um único grupo de armazenamento (Volume Group - VG), permitindo criar partições lógicas (Logical Volumes - LV) que se estendem dinamicamente através de discos distintos.
+          </p>
+
+          <div class="relative group">
+            <button onclick="copySnippet('code-linux-lvm')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+            <pre id="code-linux-lvm" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code># Supondo dois discos livres: /dev/sdb e /dev/sdc
+
+# PASSO 1: Inicializar os discos como Volumes Físicos LVM (PV)
+sudo pvcreate /dev/sdb /dev/sdc
+
+# PASSO 2: Criar um Grupo de Volumes (VG) unindo os dois drives
+sudo vgcreate vg_storage /dev/sdb /dev/sdc
+
+# PASSO 3: Criar um Volume Lógico (LV) usando 100% da soma do espaço dos dois discos
+sudo lvcreate -l 100%FREE -n lv_spanned vg_storage
+
+# PASSO 4: Formatar o volume unificado e montar
+sudo mkfs.xfs /dev/vg_storage/lv_spanned
+sudo mkdir -p /mnt/spanned_pool
+sudo mount /dev/vg_storage/lv_spanned /mnt/spanned_pool
+
+# Exibir relatório de alocação de blocos
+sudo vgs
+sudo lvs</code></pre>
+          </div>
+        </div>
+
+        <!-- 3. Volume Distribuído (RAID 0) via mdadm -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="w-7 h-7 rounded bg-emerald-600/20 text-emerald-400 flex items-center justify-center text-xs font-mono">3</span>
+              Volume Distribuído (Striped / RAID 0) usando `mdadm`
+            </h3>
+            <span class="text-xs font-mono text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded">Alta Velocidade</span>
+          </div>
+          <p class="text-sm text-slate-300 mb-4">
+            Para obter máxima taxa de transferência contínua distribuindo blocos simultaneamente em vários discos físicos, utilizamos o utilitário nativo de Software RAID do kernel Linux (<code>mdadm</code>).
+          </p>
+
+          <div class="relative group">
+            <button onclick="copySnippet('code-linux-mdadm')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+            <pre id="code-linux-mdadm" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code># Instalar mdadm se necessário (Debian/Ubuntu: sudo apt install mdadm)
+
+# PASSO 1: Criar o Array RAID 0 com chunk de 64 KB
+sudo mdadm --create --verbose /dev/md0 --level=0 --raid-devices=2 /dev/sdb /dev/sdc
+
+# PASSO 2: Verificar o status de sincronização
+cat /proc/mdstat
+
+# PASSO 3: Formatar o dispositivo virtual RAID /dev/md0
+sudo mkfs.ext4 -F /dev/md0
+sudo mkdir -p /mnt/raid0_stripe
+sudo mount /dev/md0 /mnt/raid0_stripe
+
+# PASSO 4: Salvar a configuração do RAID para persistência pós-reinicialização
+sudo mdadm --detail --scan | sudo tee -a /etc/mdadm/mdadm.conf
+sudo update-initramfs -u</code></pre>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SEÇÃO NOVA: PRÁTICA MACOS -->
+    <section id="pratica-mac" class="scroll-mt-24 space-y-8">
+      <div class="border-b border-slate-800 pb-4">
+        <span class="text-purple-400 font-mono text-xs uppercase tracking-wider">Passo a Passo Prático</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Implementando no Apple macOS</h2>
+        <p class="text-slate-400 mt-2 text-sm sm:text-base">
+          O macOS utiliza o poderoso utilitário de terminal <code>diskutil</code> e a ferramenta gráfica <em>Utilitário de Disco (Disk Utility)</em> para gerenciar tabelas GPT, containers APFS e criar volumes RAID nativos.
+        </p>
+      </div>
+
+      <div class="space-y-6">
+        <!-- 1. Formatação e Particionamento no Mac -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="w-7 h-7 rounded bg-purple-600/20 text-purple-400 flex items-center justify-center text-xs font-mono">1</span>
+              Listar e Formatar Discos em APFS, exFAT ou FAT32
+            </h3>
+            <span class="text-xs font-mono text-purple-400">diskutil</span>
+          </div>
+          <div class="relative group">
+            <button onclick="copySnippet('code-mac-format')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+            <pre id="code-mac-format" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code># 1. Identificar os discos conectados (ex: /dev/disk2)
+diskutil list
+
+# 2. Formatar disco em APFS com tabela GPT (padrão Mac)
+diskutil eraseDisk APFS "SSD_Mac" GPT /dev/disk2
+
+# 3. Formatar pendrive em exFAT (compatível com Mac, Windows e Linux)
+diskutil eraseDisk ExFAT "USB_Universal" GPT /dev/disk2
+
+# 4. Formatar pendrive em FAT32 clássico (MS-DOS FAT)
+diskutil eraseDisk FAT32 "USB_FAT32" MBR /dev/disk2
+
+# 5. Adicionar um novo volume compartilhado ao mesmo Container APFS (Space Sharing)
+diskutil apfs addVolume disk2s1 APFS "NovoVolumeDados"</code></pre>
+          </div>
+        </div>
+
+        <!-- 2. RAID 0 (Distribuído) e Concatenado (Estendido) no macOS -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="w-7 h-7 rounded bg-purple-600/20 text-purple-400 flex items-center justify-center text-xs font-mono">2</span>
+              Criar Volumes RAID 0 (Distribuído) e Concatenação (Estendido)
+            </h3>
+            <span class="text-xs font-mono text-purple-400">diskutil appleRAID</span>
+          </div>
+          <p class="text-sm text-slate-300 mb-4">
+            O subsistema <code>appleRAID</code> permite fundir dois discos físicos em um array distribuído (stripe) ou estendido/linear (concat).
+          </p>
+          <div class="relative group">
+            <button onclick="copySnippet('code-mac-raid')" class="absolute top-3 right-3 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded text-xs font-mono transition border border-slate-700">Copiar</button>
+            <pre id="code-mac-raid" class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed"><code># Criar Volume Distribuído (Stripe / RAID 0) entre dois discos (/dev/disk2 e /dev/disk3):
+diskutil appleRAID create stripe "Mac_Stripe_RAID0" APFS /dev/disk2 /dev/disk3
+
+# Criar Volume Estendido (Linear / Concatenação JBOD) somando dois discos:
+diskutil appleRAID create concat "Mac_Spanned_Concat" APFS /dev/disk2 /dev/disk3
+
+# Verificar status dos arrays RAID ativos:
+diskutil appleRAID list
+
+# Excluir / desmanchar o arranjo RAID criado:
+# diskutil appleRAID destroy &lt;UUID-do-Array&gt;</code></pre>
+          </div>
+        </div>
+
+        <!-- 3. Comandos de Verificação e Reparo (chkdsk, fsck, firstAid) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+          <h3 class="text-lg font-bold text-white mb-2">Comandos Essenciais de Verificação e Manutenção de Disco</h3>
+          <p class="text-xs text-slate-400 mb-4 font-mono">Equivalentes entre Windows, Linux e macOS:</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+            <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1">
+              <span class="text-blue-400 font-bold block">Windows (chkdsk)</span>
+              <p class="text-slate-300"><code>chkdsk E: /F /R</code></p>
+              <p class="text-slate-500 text-[11px]">/F corrige erros lógicos; /R localiza e recupera setores defeituosos (bad sectors).</p>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1">
+              <span class="text-emerald-400 font-bold block">Linux (fsck / e2fsck)</span>
+              <p class="text-slate-300"><code>sudo fsck -fvy /dev/sdb1</code></p>
+              <p class="text-slate-500 text-[11px]">-f força verificação; -v verbose; -y responde 'sim' para consertar automaticamente.</p>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-1">
+              <span class="text-purple-400 font-bold block">macOS (First Aid / fsck)</span>
+              <p class="text-slate-300"><code>diskutil verifyVolume /dev/disk2s1</code></p>
+              <p class="text-slate-500 text-[11px]">Para reparar: <code>diskutil repairVolume /dev/disk2s1</code></p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SEÇÃO 6: GUIA DE DECISÃO RÁPIDA -->
+    <section id="decision" class="scroll-mt-24 space-y-6">
+      <div class="border-b border-slate-800 pb-4">
+        <span class="text-blue-400 font-mono text-xs uppercase tracking-wider">Qual Arquitetura Escolher?</span>
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Árvore de Decisão Rápida</h2>
+        <p class="text-slate-400 mt-2 text-sm sm:text-base">
+          Responda mentalmente ao seu cenário para identificar a combinação exata de partição + volume + sistema de arquivos:
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 space-y-3">
+          <div class="text-blue-400 font-mono text-xs font-bold uppercase">Cenário A</div>
+          <h3 class="text-base font-bold text-white">Instalação de Windows ou SSD Padrão</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            SSD NVMe moderno para Windows 10/11 ou jogos convencionais em PC.
+          </p>
+          <div class="pt-3 border-t border-slate-800/80">
+            <span class="text-xs text-slate-400 block font-mono mb-1">Escolha recomendada:</span>
+            <span class="text-xs font-bold text-blue-400">GPT + Volume Simples + NTFS</span>
+          </div>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 space-y-3">
+          <div class="text-cyan-400 font-mono text-xs font-bold uppercase">Cenário B</div>
+          <h3 class="text-base font-bold text-white">Pendrive ou SSD Externo Multiplataforma</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Você transita arquivos pesados (filmes, backups) entre Windows, Mac e Linux com frequência.
+          </p>
+          <div class="pt-3 border-t border-slate-800/80">
+            <span class="text-xs text-slate-400 block font-mono mb-1">Escolha recomendada:</span>
+            <span class="text-xs font-bold text-cyan-400">GPT + Volume Simples + exFAT</span>
+          </div>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 space-y-3">
+          <div class="text-emerald-400 font-mono text-xs font-bold uppercase">Cenário C</div>
+          <h3 class="text-base font-bold text-white">Servidor Linux / Estação de Trabalho</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Ambiente Linux corporativo, nós de Kubernetes, Docker ou armazenamento de desenvolvimento.
+          </p>
+          <div class="pt-3 border-t border-slate-800/80">
+            <span class="text-xs text-slate-400 block font-mono mb-1">Escolha recomendada:</span>
+            <span class="text-xs font-bold text-emerald-400">GPT + LVM + EXT4 (ou Btrfs)</span>
+          </div>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 space-y-3">
+          <div class="text-purple-400 font-mono text-xs font-bold uppercase">Cenário D</div>
+          <h3 class="text-base font-bold text-white">Ecossistema Exclusivo Apple</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Armazenamento interno ou externo para MacBook, Mac Studio com suporte a Time Machine e snapshots.
+          </p>
+          <div class="pt-3 border-t border-slate-800/80">
+            <span class="text-xs text-slate-400 block font-mono mb-1">Escolha recomendada:</span>
+            <span class="text-xs font-bold text-purple-400">GPT + Container APFS (Space Sharing)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Rodapé -->
+  <footer class="border-t border-slate-800/80 bg-slate-950 py-8 text-center text-xs text-slate-500 font-mono">
+    <div class="max-w-7xl mx-auto px-4">
+      StorageMastery &bull; Guia Prático de Engenharia de Sistemas de Arquivos e Partições &bull; Windows & Linux
+    </div>
+  </footer>
+
+  <!-- Script da Lógica Interativa e Simulador -->
+  <script>
+    // ESTADO DO SIMULADOR
+    let currentMode = 'simple'; // 'simple', 'spanned', 'striped'
+    let disk0 = []; // Blocos no disco 0
+    let disk1 = []; // Blocos no disco 1
+    let totalWritten = 0;
+    const DISK_MAX_BLOCKS = 8;
+
+    const blockColors = [
+      'bg-blue-500 border-blue-400 text-white',
+      'bg-indigo-500 border-indigo-400 text-white',
+      'bg-purple-500 border-purple-400 text-white',
+      'bg-teal-500 border-teal-400 text-white',
+      'bg-amber-500 border-amber-400 text-black',
+      'bg-emerald-500 border-emerald-400 text-black',
+      'bg-cyan-500 border-cyan-400 text-black',
+      'bg-rose-500 border-rose-400 text-white'
+    ];
+
+    // Inicialização da interface
+    window.addEventListener('DOMContentLoaded', () => {
+      renderSlots();
+    });
+
+    function setSimMode(mode) {
+      currentMode = mode;
+      resetSimulation();
+
+      // Atualiza botões
+      const btnSimple = document.getElementById('btn-mode-simple');
+      const btnSpanned = document.getElementById('btn-mode-spanned');
+      const btnStriped = document.getElementById('btn-mode-striped');
+      const statusText = document.getElementById('sim-status-text');
+      const speedText = document.getElementById('sim-speed-text');
+      const disk1Ind = document.getElementById('disk1-indicator');
+
+      [btnSimple, btnSpanned, btnStriped].forEach(b => {
+        b.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition';
+      });
+
+      if (mode === 'simple') {
+        btnSimple.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition';
+        statusText.innerText = "Modo: Volume Simples. Os dados são gravados exclusivamente no Disco 1.";
+        speedText.innerText = "Velocidade: 1x (Standard)";
+        disk1Ind.className = "w-2.5 h-2.5 rounded-full bg-slate-600";
+        logAction("[Configuração] Modo alterado para: Volume Simples (1 Disco físico).");
+      } else if (mode === 'spanned') {
+        btnSpanned.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 text-white transition';
+        statusText.innerText = "Modo: Volume Estendido (Linear). O Disco 0 é preenchido primeiro; ao lotar, transborda para o Disco 1.";
+        speedText.innerText = "Velocidade: 1x (Sem ganho de velocidade)";
+        disk1Ind.className = "w-2.5 h-2.5 rounded-full bg-amber-500";
+        logAction("[Configuração] Modo alterado para: Volume Estendido (Linear / Spanned).");
+      } else if (mode === 'striped') {
+        btnStriped.className = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition';
+        statusText.innerText = "Modo: Volume Distribuído (RAID 0). Blocos fatiados gravados em paralelo simultaneamente nos dois discos!";
+        speedText.innerText = "Velocidade: ~2x Teórico (Paralelo)";
+        disk1Ind.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+        logAction("[Configuração] Modo alterado para: Volume Distribuído (Striped / RAID 0).");
+      }
+
+      renderSlots();
+    }
+
+    function renderSlots() {
+      const d0Slots = document.getElementById('disk0-slots');
+      const d1Slots = document.getElementById('disk1-slots');
+      const d0Counter = document.getElementById('disk0-counter');
+      const d1Counter = document.getElementById('disk1-counter');
+
+      d0Slots.innerHTML = '';
+      d1Slots.innerHTML = '';
+
+      // Disco 0 Slots
+      for (let i = 0; i < DISK_MAX_BLOCKS; i++) {
+        const item = disk0[i];
+        const slot = document.createElement('div');
+        if (item) {
+          slot.className = `h-14 rounded-lg border flex flex-col items-center justify-center text-xs font-mono font-bold shadow-md data-block ${item.color}`;
+          slot.innerHTML = `<span>${item.id}</span><span class="text-[9px] opacity-75">${item.file}</span>`;
+        } else {
+          slot.className = 'h-14 rounded-lg border border-dashed border-slate-800 bg-slate-900/40 flex items-center justify-center text-[11px] font-mono text-slate-600';
+          slot.innerText = `Bloco ${i}`;
+        }
+        d0Slots.appendChild(slot);
+      }
+      d0Counter.innerText = `${disk0.length} / ${DISK_MAX_BLOCKS} blocos ocupados`;
+
+      // Disco 1 Slots
+      for (let i = 0; i < DISK_MAX_BLOCKS; i++) {
+        const item = disk1[i];
+        const slot = document.createElement('div');
+        if (currentMode === 'simple') {
+          slot.className = 'h-14 rounded-lg border border-slate-900 bg-slate-900/10 flex items-center justify-center text-[10px] font-mono text-slate-700 select-none';
+          slot.innerText = 'Desativado';
+        } else if (item) {
+          slot.className = `h-14 rounded-lg border flex flex-col items-center justify-center text-xs font-mono font-bold shadow-md data-block ${item.color}`;
+          slot.innerHTML = `<span>${item.id}</span><span class="text-[9px] opacity-75">${item.file}</span>`;
+        } else {
+          slot.className = 'h-14 rounded-lg border border-dashed border-slate-800 bg-slate-900/40 flex items-center justify-center text-[11px] font-mono text-slate-600';
+          slot.innerText = `Bloco ${i}`;
+        }
+        d1Slots.appendChild(slot);
+      }
+
+      if (currentMode === 'simple') {
+        d1Counter.innerText = "Inativo no modo Simples";
+      } else {
+        d1Counter.innerText = `${disk1.length} / ${DISK_MAX_BLOCKS} blocos ocupados`;
+      }
+    }
+
+    function simulateWrite() {
+      totalWritten++;
+      const fileId = `Doc_${totalWritten}`;
+      const color = blockColors[(totalWritten - 1) % blockColors.length];
+
+      if (currentMode === 'simple') {
+        // Volume Simples: Grava até 4 blocos se couber no Disco 0
+        if (disk0.length + 4 > DISK_MAX_BLOCKS) {
+          logAction(`[ERRO] Disco 0 cheio! Não há mais espaço livre no volume simples.`);
+          return;
+        }
+        for (let b = 1; b <= 4; b++) {
+          disk0.push({ id: `B${b}`, file: fileId, color: color });
+        }
+        logAction(`[E/S Simples] Arquivo '${fileId}' gravado integralmente no Disco 0 (Blocos B1, B2, B3, B4).`);
+      }
+      else if (currentMode === 'spanned') {
+        // Volume Estendido: Preenche Disco 0, depois Disco 1
+        const remainingD0 = DISK_MAX_BLOCKS - disk0.length;
+        const remainingD1 = DISK_MAX_BLOCKS - disk1.length;
+
+        if (remainingD0 + remainingD1 < 4) {
+          logAction(`[ERRO] Espaço insuficiente no volume estendido! Restam apenas ${remainingD0 + remainingD1} blocos.`);
+          return;
+        }
+
+        let written = 0;
+        // Grava no Disco 0
+        while (disk0.length < DISK_MAX_BLOCKS && written < 4) {
+          written++;
+          disk0.push({ id: `B${written}`, file: fileId, color: color });
+        }
+        // Se sobrou blocos, joga no Disco 1
+        let d1Start = written + 1;
+        while (disk1.length < DISK_MAX_BLOCKS && written < 4) {
+          written++;
+          disk1.push({ id: `B${written}`, file: fileId, color: color });
+        }
+
+        if (d1Start <= 4) {
+          logAction(`[E/S Estendido] Arquivo '${fileId}' transbordou! Blocos B1..B${d1Start - 1} no Disco 0 e B${d1Start}..B4 no Disco 1.`);
+        } else {
+          logAction(`[E/S Estendido] Arquivo '${fileId}' gravado linearmente no Disco 0.`);
+        }
+      }
+      else if (currentMode === 'striped') {
+        // Volume Distribuído: 2 blocos no Disco 0 e 2 blocos no Disco 1 simultâneos
+        if (disk0.length + 2 > DISK_MAX_BLOCKS || disk1.length + 2 > DISK_MAX_BLOCKS) {
+          logAction(`[ERRO] Array RAID 0 cheio! Requer espaço livre uniforme em ambos os discos.`);
+          return;
+        }
+
+        // B1 e B3 no Disco 0; B2 e B4 no Disco 1
+        disk0.push({ id: `B1`, file: fileId, color: color });
+        disk1.push({ id: `B2`, file: fileId, color: color });
+        disk0.push({ id: `B3`, file: fileId, color: color });
+        disk1.push({ id: `B4`, file: fileId, color: color });
+
+        logAction(`[E/S Paralelo Striping] '${fileId}' fatiado! B1 e B3 enviados ao Disco 0; B2 e B4 enviados ao Disco 1 simultaneamente!`);
+      }
+
+      renderSlots();
+    }
+
+    function resetSimulation() {
+      disk0 = [];
+      disk1 = [];
+      totalWritten = 0;
+      renderSlots();
+      logAction(`[Reset] Discos esvaziados e prontos.`);
+    }
+
+    function logAction(msg) {
+      const logContainer = document.getElementById('sim-log');
+      const entry = document.createElement('div');
+      const time = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span class="text-slate-500">[${time}]</span> ${msg}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // Gerenciador de Abas do Windows
+    function switchTab(os, type) {
+      const btnCli = document.getElementById(`tab-btn-${os}-cli`);
+      const btnGui = document.getElementById(`tab-btn-${os}-gui`);
+      const contentCli = document.getElementById(`tab-content-${os}-cli`);
+      const contentGui = document.getElementById(`tab-content-${os}-gui`);
+
+      if (type === 'cli') {
+        btnCli.className = "px-4 py-2 text-xs font-mono font-semibold rounded-t-lg bg-slate-900 text-blue-400 border-t-2 border-blue-500 transition";
+        btnGui.className = "px-4 py-2 text-xs font-mono font-semibold rounded-t-lg text-slate-400 hover:text-white transition";
+        contentCli.classList.remove('hidden');
+        contentGui.classList.add('hidden');
+      } else {
+        btnGui.className = "px-4 py-2 text-xs font-mono font-semibold rounded-t-lg bg-slate-900 text-blue-400 border-t-2 border-blue-500 transition";
+        btnCli.className = "px-4 py-2 text-xs font-mono font-semibold rounded-t-lg text-slate-400 hover:text-white transition";
+        contentGui.classList.remove('hidden');
+        contentCli.classList.add('hidden');
+      }
+    }
+
+    // Copiar código para Clipboard
+    function copySnippet(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      const text = el.innerText;
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast("Comando copiado para a área de transferência!");
+      } catch (err) {
+        showToast("Não foi possível copiar automaticamente.");
+      }
+      document.body.removeChild(textArea);
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toast-msg');
+      msg.innerText = message;
+      toast.classList.remove('opacity-0', 'translate-y-20');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-20');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
